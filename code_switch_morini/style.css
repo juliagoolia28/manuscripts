@@ -1,0 +1,20 @@
+/* Whole document: */
+body{
+  font-family: Helvetica;
+  font-size: 14pt;
+}
+/* Headers */
+h1 {
+  font-size: 25pt;
+  color: Maroon;
+}
+h2 { 
+  font-size: 18pt;
+  color: DarkBlue;
+}
+
+h3 { 
+  font-size: 16pt;
+  color: Green;
+}
+

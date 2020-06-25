@@ -1,0 +1,472 @@
+---
+title: "Code Switching Analysis Morini Lab"
+author: "JM Schneider"
+date: "`r format(Sys.Date())`"
+output:
+#  word_document:
+  html_document:
+    css: style.css
+    number_sections: yes
+    toc: yes
+    toc_depth: 2
+---
+
+*Summary Statement*: Code switching between Spanish and English significantly changes as children progress from kindergarten through second grade. This is driven by significantly less code switching in English, but not Spanish. 
+
+```{r setup, include=FALSE, cache=F}
+knitr::opts_chunk$set(fig.width=6, fig.height=8, fig.path='Figs/', echo=TRUE, tidy=TRUE, message=F, warning=F, cache=T)
+```
+
+## Library Import
+```{r,include=FALSE,echo=FALSE,warning=FALSE}
+#Loading library
+library(ez); 
+library(ggplot2); 
+library(multcomp); 
+library(nlme); 
+library(pastecs); 
+library(reshape)
+library(Hmisc); 
+library (WRS2); 
+library(lme4); 
+library(lmerTest); 
+library(plyr); 
+library(splitstackshape); 
+library(naniar); 
+library(tidyr); 
+library(dplyr); 
+library(memisc); 
+library(psychReport); 
+library(foreign); 
+library(interactions); 
+library(tableone); 
+library(officer); 
+library(magrittr); 
+library(corrplot); 
+library(ppcor); 
+library(Rcmdr);
+library(ggplot2);
+library(effectsize);
+julie.theme <- theme_bw() + theme(axis.line = element_line(colour = "black"), panel.grid.minor = element_blank(), panel.grid.major = element_blank(), panel.border = element_blank(), panel.background = element_blank(), legend.title= element_blank())  #custom graphics theme for ggplot2
+```
+
+## Import and merge data
+```{r,include=FALSE,echo=FALSE,warning=FALSE}
+setwd("/Users/julieschneider/Julie_Personal/Projects/Gio_CS/")
+```
+
+## Cleaned Data
+```{r}
+df= read.csv("cs_combined_data_clean.csv", header = TRUE)
+```
+
+### Format Dataframe
+```{r, include=FALSE,echo=FALSE,warning=FALSE}
+df$CS_count <- as.numeric(as.character(df$CS_count))
+df$Language <- as.factor(as.character(df$Language))
+df$Grade <- as.numeric(as.character(df$Grade))
+df$Filename <- as.factor(as.character(df$Filename))
+df$CAmm <- as.numeric(as.character(df$CAmm))
+df$NDW.A <- as.numeric(as.character(df$NDW.A))
+df$NTW.A <- as.numeric(as.character(df$NTW.A))
+df$Prop.Utt.CS <- as.numeric(as.character(df$Prop.Utt.CS))
+df$NDW.D <- as.numeric(as.character(df$NDW.D))
+df$NTW.D <- as.numeric(as.character(df$NTW.D))
+
+df<-df[!(df$Data.Point=="Data Point"),]
+df <- df[!apply(is.na(df) | df == "", 1, all),]
+
+df$subject
+df$subject<-rep(c(1:205), each = 12)
+
+df$wave <- NA
+df$wave <- ifelse(df$Data.Point %in% c(1,2,5,6,9,10),"fall","spring")
+df$wave <- as.factor(as.character(df$wave))
+df$Data.Point <- as.numeric(df$Data.Point)
+```
+
+## Identify Outliers
+```{r, include=FALSE,echo=FALSE,warning=FALSE}
+# One alternative is to only remove outliers in BOTH NDW and NTW. This is subject 46.
+
+rm_NTW <- df %>%
+   group_by(subject) %>%
+   filter(all(NTW.A < (quantile(df$NTW.A, 0.25)) | NTW.A > quantile(df$NTW.A, 0.75)))
+
+rm_NDW <- df %>%
+   group_by(subject) %>%
+   filter(all(NDW.A < (quantile(df$NDW.A, 0.25)) | NDW.A > quantile(df$NDW.A, 0.75)))
+
+df_no_out <- df[!df$subject %in% rm_NTW$subject, , drop = FALSE]
+df_no_out <- df_no_out[!df_no_out$subject %in% rm_NDW$subject, , drop = FALSE]
+```
+
+### Merge NDW and NTW within language with larger dataframe
+```{r, include=FALSE,echo=FALSE,warning=FALSE}
+span_df <- df_no_out[which(df_no_out$Language == 'SPANISH'),]
+eng_df <- df_no_out[which(df_no_out$Language == 'ENGLISH'),]
+
+ndw.eng = read.csv("ndw_ntw_lang/NDW_eng.csv")
+ndw.span = read.csv("ndw_ntw_lang/NDW_span.csv")
+ntw.eng = read.csv("ndw_ntw_lang/NTW_eng.csv")
+ntw.span = read.csv("ndw_ntw_lang/NTW_span.csv")
+
+temp.eng <- merge(ntw.eng,ndw.eng,by="Filename")
+temp.eng.2 <- merge(temp.eng,eng_df,by="Filename")
+temp.span <- merge(ntw.span,ndw.span,by="Filename")
+temp.span.2 <- merge(temp.span,span_df,by="Filename")
+temp.span.2=subset(temp.span.2,subject!=182) #Only had 1 grade point left
+colnames(temp.span.2)[which(names(temp.span.2) == "NTW.span")] <- "NTW.withinlang"
+colnames(temp.span.2)[which(names(temp.span.2) == "NDW.span")] <- "NDW.withinlang"
+colnames(temp.eng.2)[which(names(temp.eng.2) == "NTW.eng")] <- "NTW.withinlang"
+colnames(temp.eng.2)[which(names(temp.eng.2) == "NDW.eng")] <- "NDW.withinlang"
+df_no_out <- rbind(temp.eng.2,temp.span.2)
+```
+
+### Remove subjects containing two grades
+```{r, include=FALSE,echo=FALSE,warning=FALSE}
+df_no_out=subset(df_no_out,subject!=3)
+df_no_out=subset(df_no_out,subject!=16)
+df_no_out=subset(df_no_out,subject!=22)
+df_no_out=subset(df_no_out,subject!=27)
+df_no_out=subset(df_no_out,subject!=128)
+df_no_out=subset(df_no_out,subject!=61)
+df_no_out=subset(df_no_out,subject!=182)
+
+```
+
+### Sanity Check of Data
+```{r, include=FALSE,echo=FALSE,warning=FALSE}
+sanity_check <- df_no_out %>% group_by(Grade,subject) %>% dplyr::summarise(count=n())
+sanity_check[which(sanity_check[,3]!=4),]
+#write.csv(df,'sanity_check.csv')
+```
+
+## ANOVA Model: Does code switching in each language change across grade levels?
+```{r}
+# overall_datpoint_model <- lm(Prop.Utt.CS ~ Gender + Language*Data.Point, data = df)
+# summary(overall_datpoint_model)
+# 
+# overall_grade_wave_model <- lm(Prop.Utt.CS ~ Gender + Language*wave*Grade, data = df)
+# summary(overall_grade_wave_model)
+# 
+# noout_datpoint_model <- lm(Prop.Utt.CS ~ Gender + Language*Data.Point, data = df_no_out)
+# summary(noout_datpoint_model)
+
+
+fit <- lmer(Prop.Utt.CS ~ Gender + Language*wave*Grade + (1|subject), data = df_no_out)
+summary(fit)
+effectsize(fit)
+```
+
+## Grade x Language Interaction: 
+
+Children have proportionally fewer code switches in English across the course of K-2 grades, but there is no change in Spanish code switching across grades. Children proportionally code switch *significantly* less from K-1st grade AND 1st-2nd grade. Proportion of code switches between languages significantly differed at each grade.
+
+### Post hoc tests to breakdown interaction
+```{r}
+span_df <- df_no_out[which(df_no_out$Language == 'SPANISH'),]
+eng_df <- df_no_out[which(df_no_out$Language == 'ENGLISH'),]
+
+eng.one.model <- aov(Prop.Utt.CS ~ Grade, data = eng_df)
+span.one.model <- aov(Prop.Utt.CS ~ Grade, data = span_df)
+
+summary(eng.one.model)
+summary(span.one.model)
+
+df_K.1 <- eng_df[which(eng_df$Grade <= 1),]
+#K.2_df <- eng_df[which(eng_df$Grade != 1),]
+df_1.2 <- eng_df[which(eng_df$Grade >= 1),]
+t.test(df_K.1$Grade, df_K.1$Prop.Utt.CS, paired = TRUE, alternative = "two.sided")
+#t.test(K.2_df$Grade, K.2_df$CS_count, paired = TRUE, alternative = "two.sided")
+t.test(df_1.2$Grade, df_1.2$Prop.Utt.CS, paired = TRUE, alternative = "two.sided")
+
+k_df <- df_no_out[which(df_no_out$Grade == 0),]
+first_df <- df_no_out[which(df_no_out$Grade == 1),]
+second_df <- df_no_out[which(df_no_out$Grade == 2),]
+
+t.test(k_df$Prop.Utt.CS~k_df$Language, paired = TRUE, alternative = "two.sided")
+t.test(first_df$Prop.Utt.CS~first_df$Language, paired = TRUE, alternative = "two.sided")
+t.test(second_df$Prop.Utt.CS~second_df$Language, paired = TRUE, alternative = "two.sided")
+```
+
+### Calculate means and SE for each group of interest
+```{r,include=FALSE,echo=FALSE,warning=FALSE}
+d <- df_no_out %>%
+       select(Prop.Utt.CS,Language,Grade) %>%  # select relevant variables
+       mutate(Language = factor(Language),
+              Grade = factor(Grade))
+
+head(d)
+d %>% 
+  group_by(Language, Grade) %>%
+  summarise(CS_prop_mean = mean(Prop.Utt.CS))
+sum_d <- d %>% 
+          group_by(Language, Grade) %>%
+          summarise(CS_prop_mean = mean(Prop.Utt.CS),
+                    se   = sd(Prop.Utt.CS)/sqrt(n()))
+sum_d
+```
+
+### Plot means and SE
+```{r,fig.height=5, fig.width=8}
+pd <- position_dodge(width = 0)
+sum_d %>%
+  ggplot(aes(x = Grade, y = CS_prop_mean, group = Language)) +
+    geom_line(aes(linetype = Language), position = pd) +
+    geom_errorbar(aes(ymin = CS_prop_mean - se, ymax = CS_prop_mean + se),
+                  width = .1, position = pd) +
+    geom_point(size = 4, position = pd) +
+    geom_point(size = 3, color = "white", position = pd) + 
+    guides(linetype = guide_legend("Language")) +
+    labs(x = "Grade",
+         y = "Proportion of Code Switches") +
+  theme(
+    text=element_text(size=20),
+    panel.background = element_rect(fill = "white"),         # Set plot background to white
+    legend.key  = element_rect(fill = "white"),              # Set legend item backgrounds to white
+    axis.line.x = element_line(colour = "black", size = 1),  # Add line to x axis
+    axis.line.y = element_line(colour = "black", size = 1)   # Add line to y axis
+  )
+```
+
+## Main Effect of Wave: 
+
+Significantly higher proportion of code switching in the fall, as compared to the spring. This did not differ as a function of grade or language. 
+```{r,  fig.width=8, fig.height=6}
+t.test(df_no_out$Prop.Utt.CS~df_no_out$wave, paired = TRUE)
+
+p <- ggplot(df_no_out, aes(x=wave, y=Prop.Utt.CS)) + 
+  geom_bar(stat="identity",fill="steelblue") + julie.theme + theme(text = element_text(size=20))
+p
+```
+
+## Main Effect of Language: 
+
+The proportion of utterances does not differ on the basis of language alone. In the omnnibus model, there were significantly fewer CS utterances for Spanish than for English. The reason this does not come out in the t.test relates to all the other covariates in the larger model, indicating it isn't JUST about the language -- period of development/wave matter.
+```{r,  fig.width=8, fig.height=6}
+t.test(df_no_out$Prop.Utt.CS~df_no_out$Language, paired = TRUE)
+
+p <- ggplot(df_no_out, aes(x=Language, y=Prop.Utt.CS)) + 
+  geom_bar(stat="identity",fill="steelblue") + julie.theme + theme(text = element_text(size=20))
+p
+```
+
+## Main Effect of Grade: 
+
+The proportion of utterances does significantly decrease across grades.
+```{r,  fig.width=8, fig.height=6}
+grade.model <- aov(Prop.Utt.CS ~ Grade, data = df_no_out)
+summary(grade.model)
+
+p <- ggplot(df_no_out, aes(x=Grade, y=Prop.Utt.CS)) +
+  geom_bar(stat="identity") + julie.theme + theme(text = element_text(size=20)) +  scale_fill_manual(values=c("#E69F00"))
+p
+```
+
+## Plot Prop of Utterances across languages and waves
+```{r}
+Prop.CS.aov <- aov(Prop.Utt.CS ~ Language*wave, data = df_no_out)
+summary(Prop.CS.aov)
+
+fall_df <- df_no_out[which(df_no_out$wave == 'fall'),]
+spring_df <- df_no_out[which(df_no_out$wave == 'spring'),]
+
+t.test(spring_df$Prop.Utt.CS~spring_df$Language, paired = TRUE)
+t.test(fall_df$Prop.Utt.CS~fall_df$Language, paired = TRUE)
+t.test(eng_df$Prop.Utt.CS~eng_df$wave, paired = TRUE)
+t.test(span_df$Prop.Utt.CS~span_df$wave, paired = TRUE)
+
+df_no_out %>%
+  group_by(Language,wave) %>%
+  summarise_at(vars(Prop.Utt.CS), funs(mean(., na.rm=TRUE)))
+```
+### Calculate means and SE for each group of interest
+```{r,include=FALSE,echo=FALSE,warning=FALSE}
+d <- df_no_out %>%
+       select(Prop.Utt.CS,Language,wave) %>%  # select relevant variables
+       mutate(Language = factor(Language),
+              wave = factor(wave))
+
+head(d)
+d %>% 
+  group_by(Language, wave) %>%
+  summarise(CS_prop_mean = mean(Prop.Utt.CS))
+sum_d <- d %>% 
+          group_by(Language, wave) %>%
+          summarise(CS_prop_mean = mean(Prop.Utt.CS),
+                    se   = sd(Prop.Utt.CS)/sqrt(n()))
+sum_d
+```
+
+### Plot means and SE
+```{r,fig.height=5, fig.width=8}
+pd <- position_dodge(width = 0)
+sum_d %>%
+  ggplot(aes(x = wave, y = CS_prop_mean, group = Language)) +
+    geom_line(aes(linetype = Language), position = pd) +
+    geom_errorbar(aes(ymin = CS_prop_mean - se, ymax = CS_prop_mean + se),
+                  width = .1, position = pd) +
+    geom_point(size = 4, position = pd) +
+    geom_point(size = 3, color = "white", position = pd) + 
+    guides(linetype = guide_legend("Language")) +
+    labs(x = "Wave",
+         y = "Proportion of Code Switches") +
+  theme(
+    text=element_text(size=20),
+    panel.background = element_rect(fill = "white"),         # Set plot background to white
+    legend.key  = element_rect(fill = "white"),              # Set legend item backgrounds to white
+    axis.line.x = element_line(colour = "black", size = 1),  # Add line to x axis
+    axis.line.y = element_line(colour = "black", size = 1)   # Add line to y axis
+  )
+```
+
+## Table of Demographic Information
+```{r}
+catvars <- c("Gender", "wave", "Grade","Language")
+myvars <- c("Gender", "wave","Prop.Utt.CS", "NTW.withinlang", "NDW.withinlang","MLUw.A")
+table2 <- CreateTableOne(myvars, df_no_out, catvars, strata = c("Language","Grade"))
+table2
+```
+
+## Multiple Regression: What factors are driving these difference in code switching behaviors across languages?
+
+## Plot NDW and NTW across languages and grades
+```{r}
+NTW.aov <- aov(NTW.withinlang ~ Language*Grade, data = df_no_out)
+summary(NTW.aov)
+
+t.test(k_df$NTW.withinlang~k_df$Language, paired = TRUE, alternative = "two.sided")
+t.test(first_df$NTW.withinlang~first_df$Language, paired = TRUE, alternative = "two.sided")
+t.test(second_df$NTW.withinlang~second_df$Language, paired = TRUE, alternative = "two.sided")
+
+d <- df_no_out %>%
+       select(NTW.withinlang,Language,Grade) %>%  # select relevant variables
+       mutate(Language = factor(Language),
+              Grade = factor(Grade))
+
+head(d)
+d %>% 
+  group_by(Language, Grade) %>%
+  summarise(NTW.withinlang_mean = mean(NTW.withinlang))
+sum_d <- d %>% 
+          group_by(Language, Grade) %>%
+          summarise(NTW.withinlang_mean = mean(NTW.withinlang),
+                    se   = sd(NTW.withinlang)/sqrt(n()))
+sum_d
+```
+### Plot means and SE
+```{r,fig.height=5, fig.width=8}
+pd <- position_dodge(width = 0)
+sum_d %>%
+  ggplot(aes(x = Grade, y = NTW.withinlang_mean, group = Language)) +
+    geom_line(aes(linetype = Language), position = pd) +
+    geom_errorbar(aes(ymin = NTW.withinlang_mean - se, ymax = NTW.withinlang_mean + se),
+                  width = .1, position = pd) +
+    geom_point(size = 4, position = pd) +
+    geom_point(size = 3, color = "white", position = pd) + 
+    guides(linetype = guide_legend("Language")) +
+    labs(x = "Grade",
+         y = "Number of Total Words") +
+  theme(
+    text=element_text(size=20),
+    panel.background = element_rect(fill = "white"),         # Set plot background to white
+    legend.key  = element_rect(fill = "white"),              # Set legend item backgrounds to white
+    axis.line.x = element_line(colour = "black", size = 1),  # Add line to x axis
+    axis.line.y = element_line(colour = "black", size = 1)   # Add line to y axis
+  )
+```
+```{r}
+NDW.aov <- aov(NTW.withinlang ~ Language*Grade, data = df_no_out)
+summary(NDW.aov)
+
+t.test(k_df$NDW.withinlang~k_df$Language, paired = TRUE, alternative = "two.sided")
+t.test(first_df$NDW.withinlang~first_df$Language, paired = TRUE, alternative = "two.sided")
+t.test(second_df$NDW.withinlang~second_df$Language, paired = TRUE, alternative = "two.sided")
+
+d <- df_no_out %>%
+       select(NDW.withinlang,Language,Grade) %>%  # select relevant variables
+       mutate(Language = factor(Language),
+              Grade = factor(Grade))
+
+head(d)
+d %>% 
+  group_by(Language, Grade) %>%
+  summarise(NDW.withinlang_mean = mean(NDW.withinlang))
+sum_d <- d %>% 
+          group_by(Language, Grade) %>%
+          summarise(NDW.withinlang_mean = mean(NDW.withinlang),
+                    se   = sd(NDW.withinlang)/sqrt(n()))
+sum_d
+```
+### Plot means and SE
+```{r,fig.height=5, fig.width=8}
+pd <- position_dodge(width = 0)
+sum_d %>%
+  ggplot(aes(x = Grade, y = NDW.withinlang_mean, group = Language)) +
+    geom_line(aes(linetype = Language), position = pd) +
+    geom_errorbar(aes(ymin = NDW.withinlang_mean - se, ymax = NDW.withinlang_mean + se),
+                  width = .1, position = pd) +
+    geom_point(size = 4, position = pd) +
+    geom_point(size = 3, color = "white", position = pd) + 
+    guides(linetype = guide_legend("Language")) +
+    labs(x = "Grade",
+         y = "Number of Different Words") +
+  theme(
+    text=element_text(size=20),
+    panel.background = element_rect(fill = "white"),         # Set plot background to white
+    legend.key  = element_rect(fill = "white"),              # Set legend item backgrounds to white
+    axis.line.x = element_line(colour = "black", size = 1),  # Add line to x axis
+    axis.line.y = element_line(colour = "black", size = 1)   # Add line to y axis
+  )
+```
+
+## Proficiency Analysis
+Individuals with a more *negative* NTW or NDW score had a greater proficiency in Spanish at that data point; a more *positive* NTW or NDW score means they have greater proficiency in English at that data point.
+
+The older children got, the less likely they were to code switch on the English task. Individuals with more different words in English were more likely to code switch on the Spanish task. 
+
+```{r}
+colnames(eng_df)[which(names(eng_df) == "Prop.Utt.CS")] <- "eng.Prop.Utt.CS"
+colnames(span_df)[which(names(span_df) == "Prop.Utt.CS")] <- "span.Prop.Utt.CS"
+
+diff_df <- merge(eng_df,span_df,by=c("subject","wave","Grade"),all.x = T)
+colnames(diff_df)[which(names(diff_df) == "NTW.withinlang.x")] <- "NTW.eng"
+colnames(diff_df)[which(names(diff_df) == "NTW.withinlang.y")] <- "NTW.span"
+colnames(diff_df)[which(names(diff_df) == "NDW.withinlang.x")] <- "NDW.eng"
+colnames(diff_df)[which(names(diff_df) == "NDW.withinlang.y")] <- "NDW.span"
+
+diff_df$NTW.diff <- diff_df$NTW.eng - diff_df$NTW.span
+diff_df$NDW.diff <- diff_df$NDW.eng - diff_df$NDW.span
+
+eng.simple.model <- lmer(eng.Prop.Utt.CS ~ Gender.x + Grade + wave + NTW.diff + NDW.diff + (1|subject), data = diff_df)
+summary(eng.simple.model)
+effectsize(eng.simple.model)
+
+diff_df %>% 
+  group_by(wave) %>%
+  summarise(eng.Prop.Utt.CS = mean(eng.Prop.Utt.CS))
+
+t.test(diff_df$eng.Prop.Utt.CS~diff_df$wave, paired = TRUE, alternative = "two.sided")
+
+ggplot(diff_df, aes(x=eng.Prop.Utt.CS, y = Grade)) + labs(title="English code switching across Grades", x="Proportion of Code Switches on English Task", y = "Grade") + geom_point(size=2,color='#E69F00') + julie.theme+ theme(plot.title = element_text(hjust = 0.5))
+
+span.simple.model <- lmer(span.Prop.Utt.CS ~ Gender.x + Grade + wave + NTW.diff + NDW.diff + (1|subject), data = diff_df)
+summary(span.simple.model)
+effectsize(span.simple.model)
+
+ggplot(diff_df, aes(x=span.Prop.Utt.CS, y = NDW.diff)) + labs(title="Number of Different Words DIFFERENCE & Spanish Code Switching", x="Proportion of Code Switches on Spanish Task", y = "Number of Different Words DIFFERENCE") + geom_point(size=2,color='#E69F00') + julie.theme+ theme(plot.title = element_text(hjust = 0.5))
+
+mycorrvars <- c("eng.Prop.Utt.CS", "NTW.withinlang", "NDW.withinlang")
+df_eng_subset <- eng_df[mycorrvars]
+overall_corr<-rcorr(as.matrix(df_eng_subset))
+corrplot(overall_corr$r, method = "color", type = "upper",addCoef.col="dark grey", tl.col = "black", p.mat = overall_corr$P, sig.level = 0.05, insig = "blank", tl.cex = 0.9)
+
+mycorrvars <- c("span.Prop.Utt.CS", "NTW.withinlang", "NDW.withinlang")
+df_span_subset <- span_df[mycorrvars]
+overall_corr<-rcorr(as.matrix(df_span_subset))
+corrplot(overall_corr$r, method = "color", type = "upper",addCoef.col="dark grey", tl.col = "black", p.mat = overall_corr$P, sig.level = 0.05, insig = "blank", tl.cex = 0.9)
+```
+
+
+
