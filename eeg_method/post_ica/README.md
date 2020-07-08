@@ -5,6 +5,9 @@ Required software installations:
 - EEGlab
 - ERPlab 
 
+Additional required files:
+- Channel locations
+
 Data organization:
 - Input structure:
   - Main folder containing all subjects/
