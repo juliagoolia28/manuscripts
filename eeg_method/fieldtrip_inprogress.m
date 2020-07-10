@@ -4,9 +4,11 @@
 %only contain a single condition from your experiment. This analysis can
 %only compare 2 conditions together.%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 clearvars
+cd '/Users/julieschneider/Julie_Personal/Programming/MATLAB/eeglab14_1_2b'
 eeglab
 
 %setup paths to data
+cd '/Users/julieschneider/Julie_Personal/Projects/eeg_method'
 rawdir = './raw_data/';
 wkdir = './wkdir/';
 set_files = './set_files/';
