@@ -111,12 +111,12 @@ cfg.neighbours       = ft_prepare_neighbours(cfg_neighb, GA_31diff);
 % cfg.neighbours       = chan62_neighborfile
 
 %% between groups t-test design 
-subj = s;
+subj = size(numsubjects,2);
 design = zeros(2, subj);
 for i = 1:subj
 design(1,i) = i;
 end
-subj = s/2;
+subj = subj/2;
 design(2,1:subj)        = 1;
 design(2,subj+1:end)    = 2;
 cfg.design   = design;
@@ -126,15 +126,47 @@ cfg.ivar     = 2; %number of IVs
 %% between groups t-test permutation test
 stats_31diff_beta = ft_freqstatistics(cfg, GA_31diff)
 
+%% multivariate design
+subj = size(numsubjects,2);
+group = subj/2;
+design = zeros(2,subj*3);
+for i = 1:subj
+design(1,i) = i;
+end
+for i = 1:subj
+design(1,i+subj:2*subj) = i;
+end
+for i = 1:subj
+design(1,i+2*subj:3*subj) = i;
+end
+design(2,1:subj)=1;
+design(2,subj+1:2*subj)=2;
+design(2,1+2*subj:3*subj)=3;
+group_design =[ones(1,group), ones(1,group)*2, ones(1,group), ones(1,group)*2, ones(1,group), ones(1,group)*2];
+design = [design;group_design];
+cfg.design   = design;
+cfg.ivar     = 2;
+cfg.uvar     = 3;
+
+%% stats test
+stats_Ls_multi_test = ft_freqstatistics(cfg, GA_31diff)
+
 %% extract positive clusters
 data = stats_31diff_beta;
 channels = data.label(sum(sum(data.posclusterslabelmat==1,3),2)>0);
 timepoints = data.time(squeeze(sum(sum(data.posclusterslabelmat==1,2),1))>0);
 freqpoints = data.freq(squeeze(sum(sum(data.posclusterslabelmat==1,3),1))>0);
 
+%% Extract amplitude data
+freq_idx = find(ismember(GA_31diff.freq, freqpoints))
+time_idx = find(ismember(GA_31diff.time, timepoints))
+channel_idx = find(ismember(GA_31diff.label, channels))
+for sub_num = 1:length(numsubjects)
+        ssdata_mean(sub_num,1)=squeeze(mean(squeeze(mean(squeeze(mean(squeeze(GA_31diff.powspctrm(sub_num,channel_idx,freq_idx,time_idx))))))));
+end
 %% topoplot
  %%%%TOPOPLOT of entrie scalp
-lay = Synamps2QuikCap64;
+load quickcap64
 cfg = [];
 cfg.xlim = [0.5 0.7]; % time range
 cfg.ylim = [6 8]; % insert freq range
@@ -158,8 +190,5 @@ cfg.channel = ['Cz','C2']; %pick any channel or avgof channels
 cfg.masknans = 'yes';
 figure; ft_singleplotTFR(cfg, GA_31diff);colorbar
 
-%% Extract amplitude data
-freq_idx = find(ismember(GA_31diff.freq, freqpoints))
-time_idx = find(ismember(GA_31diff.time, timepoints))
-channel_idx = find(ismember(GA_31diff.label, channels))
+
 
