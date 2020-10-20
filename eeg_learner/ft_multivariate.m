@@ -7,7 +7,7 @@ workdir = 'K:\Dept\CallierResearch\Maguire\Julie\WL Learner\wkdir\ft_epochs\july
 destinationfolder = 'K:\Dept\CallierResearch\Maguire\Julie\WL Learner\wkdir\ft_WLNSF_MP\';
 
 % establish subject list
-[d,s,r]=xlsread('subject_list.xlsx');
+[d,s,r]=xlsread('good_learner_subjects.xlsx');
 subject_list = r;
 numsubjects = (1:length(s));
 
@@ -17,16 +17,16 @@ numconds = (1:length(j));
 
 % load channel information
 load goodchanstuff;
-
+load quickcap64.mat;
 %% Perform condition .set to FT transfers%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 for s=1:length(numsubjects)
     subject = subject_list{s};
       fprintf('\n\n\n*** Loading condition 2 EEGLAB data from subject (%s) ***\n\n\n', s , subject);
-    EEG = pop_loadset('filename', [subject '_MP2.set'],'filepath',workdir);
+    EEG = pop_loadset('filename', [subject '_MP3.set'],'filepath',workdir);
 eeglab redraw
 %convert set to data 
 FTcurrentdata = eeglab2fieldtrip (EEG, 'preprocessing','none');
-FTcurrentdata_cond2.(['sub_' subject]) = FTcurrentdata;
+FTcurrentdata_cond3.(['sub_' subject]) = FTcurrentdata;
 clearvars FTcurrentdata
 end
 
@@ -46,8 +46,8 @@ for s=1:length(numsubjects)
     subject = subject_list{s};
         fprintf('\n\n\n*** Running condition 3 frequency analysis for (%s) ***\n\n\n', s , subject);
    %Run frequency analysis
-        freq_currentsubject = ft_freqanalysis(cfg, FTcurrentdata_cond3.(['sub_' subject]));
-        freqcond3.(['sub_' subject]) = freq_currentsubject;
+        freq_currentsubject = ft_freqanalysis(cfg, FTcurrentdata_cond1.(['sub_' subject]));
+        freqcond1.(['sub_' subject]) = freq_currentsubject;
 end
 clearvars freq_currentsubject
 
@@ -73,14 +73,20 @@ GA_MP2.elec = goodelectrodeconfig;
 GA_MP3 = ft_freqgrandaverage(cfg,  freqcond3.(['sub_' subject_list{1}]),    freqcond3.(['sub_' subject_list{2}]),   freqcond3.(['sub_' subject_list{3}]),   freqcond3.(['sub_' subject_list{4}]),   freqcond3.(['sub_' subject_list{5}]),   freqcond3.(['sub_' subject_list{6}]),   freqcond3.(['sub_' subject_list{7}]),   freqcond3.(['sub_' subject_list{8}]),   freqcond3.(['sub_' subject_list{9}]),   freqcond3.(['sub_' subject_list{10}]),  freqcond3.(['sub_' subject_list{11}]),  freqcond3.(['sub_' subject_list{12}]),  freqcond3.(['sub_' subject_list{13}]),  freqcond3.(['sub_' subject_list{14}]),  freqcond3.(['sub_' subject_list{15}]),  freqcond3.(['sub_' subject_list{16}]),  freqcond3.(['sub_' subject_list{17}]),  freqcond3.(['sub_' subject_list{18}]),  freqcond3.(['sub_' subject_list{19}]),  freqcond3.(['sub_' subject_list{20}]),  freqcond3.(['sub_' subject_list{21}]),  freqcond3.(['sub_' subject_list{22}]),  freqcond3.(['sub_' subject_list{23}]),  freqcond3.(['sub_' subject_list{24}]),  freqcond3.(['sub_' subject_list{25}]),  freqcond3.(['sub_' subject_list{26}]),  freqcond3.(['sub_' subject_list{27}]),  freqcond3.(['sub_' subject_list{28}]),  freqcond3.(['sub_' subject_list{29}]),  freqcond3.(['sub_' subject_list{30}]),  freqcond3.(['sub_' subject_list{31}]),  freqcond3.(['sub_' subject_list{32}]),  freqcond3.(['sub_' subject_list{33}]),  freqcond3.(['sub_' subject_list{34}]),  freqcond3.(['sub_' subject_list{35}]),  freqcond3.(['sub_' subject_list{36}]),  freqcond3.(['sub_' subject_list{37}]),  freqcond3.(['sub_' subject_list{38}]),  freqcond3.(['sub_' subject_list{39}]),  freqcond3.(['sub_' subject_list{40}]),  freqcond3.(['sub_' subject_list{41}]),  freqcond3.(['sub_' subject_list{42}]),  freqcond3.(['sub_' subject_list{43}]),  freqcond3.(['sub_' subject_list{44}]))
 GA_MP3.elec = goodelectrodeconfig;
 
+%% One Group Only:
+GA_MP1_goodlearn = ft_freqgrandaverage(cfg,  freqcond1.(['sub_' subject_list{1}]),	freqcond1.(['sub_' subject_list{2}]),	freqcond1.(['sub_' subject_list{3}]),	freqcond1.(['sub_' subject_list{4}]),	freqcond1.(['sub_' subject_list{5}]),	freqcond1.(['sub_' subject_list{6}]),	freqcond1.(['sub_' subject_list{7}]),	freqcond1.(['sub_' subject_list{8}]),	freqcond1.(['sub_' subject_list{9}]),	freqcond1.(['sub_' subject_list{10}]),	freqcond1.(['sub_' subject_list{11}]),	freqcond1.(['sub_' subject_list{12}]),	freqcond1.(['sub_' subject_list{13}]),	freqcond1.(['sub_' subject_list{14}]),	freqcond1.(['sub_' subject_list{15}]),	freqcond1.(['sub_' subject_list{16}]),	freqcond1.(['sub_' subject_list{17}]),	freqcond1.(['sub_' subject_list{18}]),	freqcond1.(['sub_' subject_list{19}]),	freqcond1.(['sub_' subject_list{20}]),	freqcond1.(['sub_' subject_list{21}]),	freqcond1.(['sub_' subject_list{22}]))
+GA_MP1_goodlearn.elec = goodelectrodeconfig;
+
+GA_MP3_goodlearn = ft_freqgrandaverage(cfg,  freqcond3.(['sub_' subject_list{1}]),    freqcond3.(['sub_' subject_list{2}]),   freqcond3.(['sub_' subject_list{3}]),   freqcond3.(['sub_' subject_list{4}]),   freqcond3.(['sub_' subject_list{5}]),   freqcond3.(['sub_' subject_list{6}]),   freqcond3.(['sub_' subject_list{7}]),   freqcond3.(['sub_' subject_list{8}]),   freqcond3.(['sub_' subject_list{9}]),   freqcond3.(['sub_' subject_list{10}]),  freqcond3.(['sub_' subject_list{11}]),  freqcond3.(['sub_' subject_list{12}]),  freqcond3.(['sub_' subject_list{13}]),  freqcond3.(['sub_' subject_list{14}]),  freqcond3.(['sub_' subject_list{15}]),  freqcond3.(['sub_' subject_list{16}]),  freqcond3.(['sub_' subject_list{17}]),  freqcond3.(['sub_' subject_list{18}]),  freqcond3.(['sub_' subject_list{19}]),  freqcond3.(['sub_' subject_list{20}]),  freqcond3.(['sub_' subject_list{21}]),  freqcond3.(['sub_' subject_list{22}]))
+GA_MP3_goodlearn.elec = goodelectrodeconfig;
 %% Make difference value between MP3 and MP1
-GA_31diff = GA_MP1;
-GA_31diff.powspctrm = GA_MP3.powspctrm - GA_MP1.powspctrm;
+GA_31diff_goodlearn = GA_MP1_goodlearn;
+GA_31diff_goodlearn.powspctrm = GA_MP3_goodlearn.powspctrm - GA_MP1_goodlearn.powspctrm;
 %% Permutation test
 cfg = [];
 cfg.channel          = {'all'};
 cfg.latency          = [0 1];
-cfg.frequency        = [13 30];
+cfg.frequency        = [4 8];
 cfg.avgovertime      = 'no' ;                  
 cfg.avgoverfreq      = 'no';
 cfg.method           = 'montecarlo';
@@ -124,7 +130,7 @@ cfg.uvar     = 1;
 cfg.ivar     = 2; %number of IVs
 
 %% between groups t-test permutation test
-stats_31diff_beta = ft_freqstatistics(cfg, GA_31diff)
+stats_31diff_theta = ft_freqstatistics(cfg, GA_31diff)
 
 %% multivariate design
 subj = size(numsubjects,2);
@@ -166,29 +172,38 @@ for sub_num = 1:length(numsubjects)
 end
 %% topoplot
  %%%%TOPOPLOT of entrie scalp
-load quickcap64
 cfg = [];
-cfg.xlim = [0.5 0.7]; % time range
-cfg.ylim = [6 8]; % insert freq range
-cfg.zlim = [-0.5 0.5];
-cfg.baseline = [-0.5 0];
+cfg.xlim = [0.108 0.3];
+cfg.ylim = [13 19];
+cfg.zlim = [-.2 .2]; % the value 1 means 100%, so this ranges from 60% to 140% of the baseline power
+cfg.baseline = [-0.5 0.0];
 cfg.baselinetype = 'absolute';
 cfg.layout = lay;
-%figure; ft_topoplotTFR(cfg, GANLs2); colorbar
-%figure; ft_topoplotTFR(cfg, GANLs1); colorbar
-figure; ft_topoplotTFR(cfg, GA_31diff); colorbar
+figure; ft_topoplotTFR(cfg,GA_31diff_poorlearn); colorbar
 
-%% 
+% so far it was the same as above, now change the colormap
+ft_hastoolbox('brewermap', 1);         % ensure this toolbox is on the path
+colormap(flipud(brewermap(64,'RdBu'))) % change the colormap
+%% Single Channel
 cfg = [];
 cfg.baseline = [-0.5 0];
 cfg.baselinetype = 'absolute'; %absolute or relative
 cfg.parameter = 'powspctrm';
-cfg.zlim = [-0.5 0.5];
+cfg.zlim = [-.3 0.3];
 cfg.xlim = [0 1];
-cfg.ylim = [3 10];
-cfg.channel = ['Cz','C2']; %pick any channel or avgof channels
+cfg.ylim = [12 25];
+cfg.channel = ('P7'); %pick any channel or avgof channels
 cfg.masknans = 'yes';
-figure; ft_singleplotTFR(cfg, GA_31diff);colorbar
+figure; ft_singleplotTFR(cfg, GA_31diff_goodlearn);colorbar
 
+% so far it was the same as above, now change the colormap
+ft_hastoolbox('brewermap', 1);         % ensure this toolbox is on the path
+colormap(flipud(brewermap(64,'RdBu'))) % change the colormap
 
-
+%%
+cfg = [];
+cfg.baseline = [-0.5 0.0];
+cfg.baselinetype = 'relative';
+cfg.zlim = [-.75 .75];
+cfg.channel = 'Cz'; % top figure
+figure; ft_singleplotTFR(cfg, GA_31diff);

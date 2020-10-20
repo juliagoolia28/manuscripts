@@ -1,0 +1,134 @@
+---
+title: 'Low SES Learn Project'
+author: "Julie M. Schneider"
+date: "`r format(Sys.Date(), '%B %d, %Y')`"
+output:
+   html_document:
+    toc: true
+    toc_depth: 3
+    number_sections: true
+    css: jamie_mod3.css
+    df_print: paged
+---
+```{r setup, include=FALSE, cache=T}
+knitr::opts_chunk$set(fig.width=6, fig.height=4, fig.align = 'center', fig.path='Figs/', echo=TRUE, tidy=TRUE, message=F, warning=F, cache=F)
+```
+
+```{r, include =FALSE, message=FALSE}
+library(tidyverse);
+library(reshape2);
+library(viridis);
+library(corrplot);
+library(Hmisc); # another method for creating correlation matrices
+library(leaps); # we'll want this one for model selection
+library(cowplot); #some ggplot tidying
+library(dplyr);
+library(MatchIt);
+library(lme4); 
+library(lmerTest); 
+library(tableone); 
+# set color palette:
+vir <-colorRampPalette(c("#440154FF", "#238A8DFF", "#55C667FF", "#FDE725FF"))
+```
+
+## Data Import and Working Directory
+```{r}
+#rm(list=ls())
+
+# Max print output.
+options(max.print=1e9)
+options(dplyr.print_max = 1e10)
+
+setwd("/Users/julieschneider/Julie_Personal/Projects/LowSES_Learn/")
+df=read.csv('wlnsf_import.csv')
+df_trials=read.csv('num_trials.csv')
+summary(df$MP.Ave)
+```
+
+## Low SES Children Only
+```{r}
+#target <- c("A","B","C","D")
+#df <- filter(df, mat_ed %in% target)
+df<-df[(df$MatEd.3==0),]
+df<-df[-c(85:521), ]
+df<-df[!(df$MP.Epoched!="Yes"),]
+```
+
+## Evaluate Dataframe
+```{r}
+## Median of overall group WL PC is 66%
+df$learner <- ifelse(df$MP.Ave >= 0.66,"good","poor")
+df %>% 
+  group_by(learner) %>%
+  summarise(mean(MP.Ave))
+df<-df[!is.na(df$PPVT.4.SS),]
+df<-df[!is.na(df$learner),]
+
+#write.csv(df,"cleaned_lowlearn.csv")
+df_cleaned=read.csv('cleaned_lowlearn.csv')
+df_cleaned<-df_cleaned[(df_cleaned$Mated_Raw==1),]
+```
+## Trial check
+```{r}
+t.test(df_trials$trials_cond1~df_trials$group, paired = FALSE, var.equal=TRUE)
+t.test(df_trials$trials_cond3~df_trials$group, paired = FALSE, var.equal=TRUE)
+
+catvars <- c("group")
+myvars <- c("trials_cond1","trials_cond3")
+table1 <- CreateTableOne(myvars, df_trials, catvars, strata = c("group"))
+table1
+```
+
+## Behavioral group comparisons
+```{r}
+t.test(df_cleaned$PPVT.4.SS~df_cleaned$learner, paired = FALSE, var.equal=TRUE)
+t.test(df_cleaned$PPVT.Raw.Score~df_cleaned$learner, paired = FALSE, var.equal=TRUE)
+t.test(df_cleaned$GORT.V.ORI~df_cleaned$learner, paired = FALSE, var.equal=TRUE)
+t.test(df_cleaned$Digit.Span~df_cleaned$learner, paired = FALSE, var.equal=TRUE)
+
+t.test(df_cleaned$Language.History~df_cleaned$learner, paired = FALSE, var.equal=TRUE)
+t.test(df_cleaned$Age~df_cleaned$learner, paired = FALSE, var.equal=TRUE)
+
+vocab.aov <- aov(MP.Ave ~ learner*PPVT.4.SS, data = df_cleaned)
+summary(vocab.aov)
+
+read.aov <- aov(MP.Ave ~ learner*GORT.V.ORI, data = df_cleaned)
+summary(read.aov)
+```
+```{r}
+myvars <- c("Subject.Code","learner")
+df_subset <- df_cleaned[myvars]
+# write.csv(df_subset, "subject_list.csv")
+```
+
+```{r}
+df_eeg=read.csv('MP_31diff_amplitudes.csv')
+df_all= merge(df_cleaned,df_eeg)
+#write.csv(df_all, "eeg_behavioral.csv")
+```
+
+## Table of behavioral differences between groups
+```{r}
+catvars <- c("Gender", "Age", "learner", "Language.History")
+myvars <- c("Gender", "Age","MP.Ave","Language.History","GORT.V.ORI", "PPVT.4.SS","Digit.Span")
+table2 <- CreateTableOne(myvars, df_all, catvars, strata = c("learner"))
+table2
+```
+
+## Difference from overall group performance (61%)
+```{r}
+poor <- df_all[which(df_all$learner == 'poor'),]
+good <- df_all[which(df_all$learner == 'good'),]
+
+t.test(poor$MP.Ave, mu = .61, alternative = "two.sided")
+t.test(good$MP.Ave, mu = .61, alternative = "two.sided")
+```
+## Multiple Regression Analysis
+```{r}
+vocab.lm <- lm(PPVT.4.SS ~ Age + Gender + Language.History + theta + alpha + beta +Digit.Span + GORT.V.ORI, data = df_all)
+summary(vocab.lm)
+
+```
+
+
+
