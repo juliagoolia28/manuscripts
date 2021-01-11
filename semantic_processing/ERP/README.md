@@ -7,8 +7,7 @@ This
 3. Create ROI:
 
 ```
-ERP = pop_erpchanoperator( ERP, {  'ch63 = (ch9+ch10+ch11+ch27+ch28+ch29+ch36+ch37+ch38)/9 label Frontal Central'} , 'ErrorMsg', 'popup',...
- 'KeepLocations',  0, 'Warning', 'on' );
+ERP = pop_erpchanoperator( ERP, {  'ch63 = (ch16+ch17+ch18+ch27)/4 label Left Central'} , 'ErrorMsg', 'popup', 'KeepLocations',  0, 'Warning', 'on' );
 ```
 4. Create Average Condition (related):
 
