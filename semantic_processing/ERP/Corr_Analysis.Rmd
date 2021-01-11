@@ -19,6 +19,7 @@ julie.theme <- theme_bw() + theme(axis.line = element_line(colour = "black"), pa
 ```{r setup, include=FALSE}
 setwd('/Users/julieschneider/Google Drive File Stream/My Drive/Manuscripts/manuscripts/semantic_processing/ERP')
 df= read.spss("Correlation_Analysis.sav", to.data.frame=TRUE)
+df_new = read.csv('erp_stats.csv')
 ```
 
 ## Compute stats for ERP
@@ -26,9 +27,13 @@ df= read.spss("Correlation_Analysis.sav", to.data.frame=TRUE)
 t.test(df$UnrelatedERP, df$RelatedERP, paired =TRUE)
 mean(df$UnrelatedERP)
 mean(df$RelatedERP)
+
+t.test(df_new$Unrelated_ERP, df_new$Related_ERP, paired =TRUE)
 ```
 ## Correlation analysis
 ```{r}
-cor.test(df$DiffERP, df$DiffERSP, method=c("pearson"))
+cor.test(df_new$ERP_diff,df_new$ERSP_diff, method = c("pearson"))
+cor.test(df_new$Related_ERP,df_new$Related_ERSP, method = c("pearson"))
+cor.test(df_new$Unrelated_ERP,df_new$Unrelated_ERSP, method = c("pearson"))
 ```
 
