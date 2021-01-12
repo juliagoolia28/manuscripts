@@ -12,7 +12,7 @@ Semantic mastery requires knowing not only a word’s meaning but also how the w
 Maguire Server\Workspace\N400-theme category\Theme Category\Children
 ```
 
-- All Epoched data for this project are located at:
+- All Epoched data for this project (both ERP & ERSP), and the study used for stats, are located at:
 ```
-Maguire Server\For RA use\Epoched Data\Theme_Cat
+Maguire Server\For RA use\Studies\Theme Category\Studies\JMS_N400_theta
 ```
