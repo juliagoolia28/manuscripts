@@ -16,3 +16,16 @@ Maguire Server\Workspace\N400-theme category\Theme Category\Children
 ```
 Maguire Server\For RA use\Studies\Theme Category\Studies\JMS_N400_theta
 ```
+
+1. Create a STUDY design using the EEGLab Toolbox within Matlab
+  - Create two conditions: Related and Unrelated
+  - Codes for Related: 211 & 212 & 221 & 222 & 231 & 232 & 241 & 242
+  - Codes for Unrelated: 213 & 223 & 233 & 243
+
+2. Precompute the STUDY to analyze ERPs and ERSPs (removing baseline)
+3. Once the STUDY is done precomputing, save as
+4. pop_chanplot for computation of statistics
+  - To compute channel clusters:
+  - select all electrodes
+  - STATS: [insert image]
+  - PARAMS: 
