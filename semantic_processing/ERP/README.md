@@ -1,5 +1,8 @@
 ## ERP Analysis for the "Neural underpinnings of preschooler’s semantic processing: evidence from the N400 and theta frequency of the EEG"
 
+Statistics were run using the same study design run for the ERSP data. Extracted numbers for all analyses were run using the [extract_erp.m script](https://github.com/juliagoolia28/manuscripts/blob/master/semantic_processing/ERP/extract_ERP.m)
+
+To plot the waveforms, ERPlab was used:
 The group average file was created based on individual analyses done using the [erplab analysis script](https://github.com/juliagoolia28/manuscripts/blob/master/semantic_processing/ERP/erplab_analysis.m).
  - binlist.txt file is used for BINLISTER
  - great_grand_avg_erp.txt file is used to upload all files and creat grand average that is used below
@@ -23,5 +26,4 @@ ERP = pop_ploterps( ERP, [ 2 4],  63 , 'AutoYlim', 'on', 'Axsize', [ 0.05 0.08],
  'on', 'Position', [ 63.1429 15.5882 106.857 31.9412], 'Style', 'Classic', 'Tag', 'ERP_figure', 'Transparency',  0, 'xscale',...
  [ -99.0 998.0   -50 0:200:800 ], 'YDir', 'normal' );
  ```
-6. Extract ERP Values using ERP Extract Script.
 
