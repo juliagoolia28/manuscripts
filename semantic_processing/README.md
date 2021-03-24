@@ -28,4 +28,4 @@ Maguire Server\For RA use\Studies\Theme Category\Studies\JMS_N400_theta
     - To compute channel clusters:
     - select all electrodes
     - STATS: [insert image]
-    - PARAMS: 
+   
