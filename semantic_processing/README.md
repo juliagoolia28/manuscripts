@@ -1,5 +1,5 @@
 # Neural underpinnings of preschooler’s semantic processing: evidence from the N400 and theta frequency of the EEG
-## Sonali Poudel, Julie M. Schneider, Vyom M. Raval, Anna E. Middleton, Asha Pavuluri & Mandy J. Maguire
+## Sonali Poudel, Julie M. Schneider, Anna E. Middleton, Asha Pavuluri & Mandy J. Maguire
 
 ## Abstract. 
 
