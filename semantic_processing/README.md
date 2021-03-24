@@ -25,7 +25,6 @@ Maguire Server\For RA use\Studies\Theme Category\Studies\JMS_N400_theta
 2. Precompute the STUDY to analyze ERPs and ERSPs (removing baseline)
 3. Once the STUDY is done precomputing, save as
 4. pop_chanplot for computation of statistics
-    - To compute channel clusters:
-    - select all electrodes
+    - To compute channel clusters: select all electrodes
     - STATS: ![Set Stats based on this image](https://github.com/juliagoolia28/manuscripts/blob/master/semantic_processing/stats.png)
    
