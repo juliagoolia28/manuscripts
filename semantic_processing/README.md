@@ -27,5 +27,5 @@ Maguire Server\For RA use\Studies\Theme Category\Studies\JMS_N400_theta
 4. pop_chanplot for computation of statistics
     - To compute channel clusters:
     - select all electrodes
-    - STATS: [insert image]
+    - STATS: ![Set Stats based on this image](https://github.com/juliagoolia28/manuscripts/blob/master/semantic_processing/stats.png)
    
