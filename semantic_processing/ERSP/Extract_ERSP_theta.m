@@ -14,22 +14,22 @@
 %each element of ersp data is (freq,time,channel,subject)
 
 %Condition by group averaging over channels
-Unrelated= squeeze(mean(erspdata{1,1},2));
-Related= squeeze(mean(erspdata{2,1},2));
+Related= squeeze(mean(erspdata{1,1},2));
+Unrelated= squeeze(mean(erspdata{2,1},2));
 
 %Condition by group averaging over times
-Unrelated= squeeze(mean(Unrelated,1));
 Related= squeeze(mean(Related,1));
+Unrelated= squeeze(mean(Unrelated,1));
 
 %Condition by group averaging over freqs
-Unrelated= squeeze(mean(Unrelated,1));
 Related= squeeze(mean(Related,1));
+Unrelated= squeeze(mean(Unrelated,1));
 
 %Switch from hor to ver
-Unrelated = Unrelated';
 Related = Related';
+Unrelated = Unrelated';
 
-Output= [Unrelated,Related]
+Output= [Related,Unrelated]
 
-[h,p] = ttest(Unrelated,Related)
+[h,p] = ttest(Related,Unrelated)
 

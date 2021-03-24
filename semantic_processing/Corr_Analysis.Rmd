@@ -31,8 +31,8 @@ cor$statistic
 ### Plot correlation
 ```{r}
 #jpeg("Figs/vocab_regression_022321.jpeg")
-ggplot(df, aes(x=ERP_Diff, y = ERSP_Diff)) + 
-  labs(title="ERP & ERSP", y = "Theta Difference", x = "N400") + 
+ggplot(df, aes(x=ERSP_Diff, y = ERP_Diff)) + 
+  labs(title="Relationship between N400 & Theta", y = "N400 Effect", x = "Theta Difference") + 
   geom_point(size=2,color='#E69F00') + 
   julie.theme+ 
   theme(plot.title = element_text(hjust = 0.5, size =20), axis.text = element_text(size = 20), axis.title = element_text(size=20)) +
