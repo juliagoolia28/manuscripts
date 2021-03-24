@@ -6,7 +6,7 @@
 %Left parietal:'p7','p5','p3','p1','po7','po5','po3','o1','cb1'
 %Right parietal:'p2','p4','p6','p8','po4','po6','po8','cb2','o2'
 
-[STUDY erspdata ersptimes erspfreqs pgroup pcond pinter] = std_erspplot(STUDY, ALLEEG,'channels',{'fc3','c3','c5','cp7'}, 'freqrange', [4:8], 'timerange', [350:550],'alpha', .05);%
+[STUDY erspdata ersptimes erspfreqs pgroup pcond pinter] = std_erspplot(STUDY, ALLEEG,'channels',{'fc3','c3','c1','tp7'}, 'freqrange', [4:8], 'timerange', [300:500],'alpha', .05);%
  
 %To determine the size/dimensions of a 4-D array:
 %size(erspdata{1, 1}) %where erspdata{1,1} is the name of one 4-D double when opened
