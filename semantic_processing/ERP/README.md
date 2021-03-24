@@ -23,5 +23,5 @@ ERP = pop_ploterps( ERP, [ 2 4],  63 , 'AutoYlim', 'on', 'Axsize', [ 0.05 0.08],
  'on', 'Position', [ 63.1429 15.5882 106.857 31.9412], 'Style', 'Classic', 'Tag', 'ERP_figure', 'Transparency',  0, 'xscale',...
  [ -99.0 998.0   -50 0:200:800 ], 'YDir', 'normal' );
  ```
-6. Extract ERP Values using ERPlab Measurement Tool:
+6. Extract ERP Values using ERPlab Measurement Tool: ![erplab_params](https://github.com/juliagoolia28/manuscripts/blob/master/semantic_processing/ERP/erplab_params.png)
 
