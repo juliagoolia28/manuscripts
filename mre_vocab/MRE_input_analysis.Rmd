@@ -1,0 +1,179 @@
+---
+title: "MRE_Input_Manuscript"
+author: "Julie M. Schneider"
+date: "1/10/2022"
+output: html_document
+---
+### Import libraries ( you may need to add more here as you go)
+```{r loadlib, echo=T, results='hide', message=F, warning=F}
+library(dplyr)
+library(plyr)
+library(ppcor);
+library(psych);
+library(interactions);
+library(readr);
+library(tidyr);
+library(Hmisc);
+library(tidyverse);
+library(stringr);
+library(reshape2);
+library(svglite);
+library(ggpubr);
+
+julie.theme <- theme_bw() + theme(axis.line = element_line(colour = "black"), panel.grid.minor = element_blank(), panel.grid.major = element_blank(), panel.border = element_blank(), panel.background = element_blank(), legend.title= element_blank())  #custom graphics theme for ggplot2
+```
+
+### Load Datasets
+```{r}
+complete <- read.csv('MRE_input_data.csv')
+```
+
+## Remove outlier, compute means/SD for age, input, and vocabulary
+```{r}
+complete<-complete[!(complete$Subject== 18),]
+
+mean(complete$chrono_age)
+sd(complete$chrono_age)
+range(complete$chrono_age)
+
+count(complete$mat_ed_qualtrics)
+count(complete$gender___0)
+
+mean(complete$Uncorrected.Standard.Score)
+sd(complete$Uncorrected.Standard.Score)
+
+mean(complete$Age.Corrected.Standard.Score)
+sd(complete$Age.Corrected.Standard.Score)
+
+mean(complete$Parent.NTW)
+sd(complete$Parent.NTW)
+mean(complete$Parent.NDW)
+sd(complete$Parent.NDW)
+mean(complete$Parent.MLU)
+sd(complete$Parent.MLU)
+mean(complete$Parent.quality.avg)
+sd(complete$Parent.quality.avg)
+```
+
+# Correlation Matrices
+## 3.1 Association between brain viscoelasticity and language input
+## Is Maternal Education associated with Quality/Quantity of Input?
+```{r}
+# Is maternal education associated with input?
+pcor.test(x = complete$Parent.quality.avg  , y = complete$mat_ed_qualtrics, 
+          z = complete[, c("chrono_age")]) #0.26, p = .229
+pcor.test(x = complete$Parent.NTW  , y = complete$mat_ed_qualtrics, 
+          z = complete[, c("chrono_age")]) #0.31, p = .144
+```
+
+## MRE measures and input
+```{r}
+par.r.input<-partial.r(data=complete, x=c("Parent.quality.avg",  "LIFG_stiff","RIFG_stiff",                   "LSMG_stiff","RSMG_stiff","L_Temp_stiff","R_Temp_stiff","LIFG_DR" ,"RIFG_DR","LSMG_DR","RSMG_DR",                      "L_Temp_DR" , "R_Temp_DR"), y=c("chrono_age","mat_ed_qualtrics","Parent.utterances","Child.utterances"))
+lowerMat(par.r.input)
+
+## Follow-up correlations
+pcor.test(x = complete$LIFG_stiff  , y = complete$Parent.quality.avg, 
+          z = complete[, c("chrono_age","mat_ed_qualtrics","Parent.utterances","Child.utterances")]) # R = .47, p = .034
+
+## Follow-up correlations
+pcor.test(x = complete$LIFG_DR  , y = complete$Parent.quality.avg, 
+          z = complete[, c("chrono_age","mat_ed_qualtrics","Parent.utterances","Child.utterances")]) # R = .02, p = .50
+
+## Follow-up correlations
+pcor.test(x = complete$RIFG_stiff  , y = complete$Parent.quality.avg, 
+          z = complete[, c("chrono_age","mat_ed_qualtrics","Parent.utterances","Child.utterances")]) # R = .44, p = .050
+
+## Follow-up correlations
+pcor.test(x = complete$RIFG_DR  , y = complete$Parent.quality.avg, 
+          z = complete[, c("chrono_age","mat_ed_qualtrics","Parent.utterances","Child.utterances")]) # R = -.14, p = .556
+
+## Follow-up correlations
+pcor.test(x = complete$R_Temp_stiff  , y = complete$Parent.quality.avg, 
+          z = complete[, c("chrono_age","mat_ed_qualtrics","Parent.utterances","Child.utterances")]) # R = .50, p = .026
+
+## Follow-up correlations
+pcor.test(x = complete$R_Temp_DR  , y = complete$Parent.quality.avg, 
+          z = complete[, c("chrono_age","mat_ed_qualtrics","Parent.utterances","Child.utterances")]) # R = -.24, p = .305
+```
+## Plotting Figure 2 (statistics are not perfect match to above due to correlation versus lm)
+```{r}
+reg1 <- lm(RIFG_DR~chrono_age + mat_ed_qualtrics + Parent.utterances + Child.utterances, data= complete)   # run linear regression
+complete$resid1 <- resid(reg1)     # find the residuals - HSGPA free of SATV
+reg2 <- lm(Parent.quality.avg ~ chrono_age + mat_ed_qualtrics + Parent.utterances + Child.utterances, data= complete)   # second regression
+complete$resid2 <- resid(reg2)     # second set of residuals - FGPA free of SATV
+cor(complete$resid1, complete$resid2) # correlation of residuals - partial correlation
+
+
+
+ggscatter(complete, x = "resid1", y = "resid2", 
+          add = "reg.line", conf.int = TRUE, 
+          cor.coef = TRUE, cor.method = "pearson",
+          xlab = "RIFG_DR", ylab = "Quality of Parent Input")
+
+## Save the Output (comment/uncomment)
+#ggsave(filename="/Users/julie/Desktop/MRE Data/aim1_images/RIFG_DR.svg", 
+#    width=5, 
+#    height=4, 
+#    pointsize=12)
+```
+## 3.2 Association between brain viscoelasticity and vocabulary outcome
+```{r}
+par.r.vocab<-partial.r(data=complete, x=c("Uncorrected.Standard.Score","LIFG_stiff","RIFG_stiff",                   "LSMG_stiff","RSMG_stiff","L_Temp_stiff","R_Temp_stiff","LIFG_DR" ,"RIFG_DR","LSMG_DR","RSMG_DR",                      "L_Temp_DR" , "R_Temp_DR"), y=c("chrono_age","mat_ed_qualtrics"))
+lowerMat(par.r.vocab)  
+
+## Follow-up correlations
+pcor.test(x = complete$RIFG_DR  , y = complete$Uncorrected.Standard.Score, 
+          z = complete[, c("chrono_age","mat_ed_qualtrics")]) #-0.44, p = .044
+
+## Follow-up correlations
+pcor.test(x = complete$RIFG_stiff  , y = complete$Uncorrected.Standard.Score, 
+          z = complete[, c("chrono_age","mat_ed_qualtrics")]) #-0.08, p = .715
+```
+
+## Plotting Figure 3 (statistics are not perfect match to above due to correlation versus lm)
+```{r}
+library("ggpubr")
+ggscatter(complete, x = "RIFG_DR", y = "Uncorrected.Standard.Score", 
+          add = "reg.line", conf.int = TRUE, 
+          cor.coef = TRUE, cor.method = "pearson",
+          xlab = "RIFG_DR", ylab = "Uncorrected.Standard.Score")
+
+reg1 <- lm(RIFG_DR~chrono_age + mat_ed_qualtrics, data= complete)   # run linear regression
+complete$resid1 <- resid(reg1)     # find the residuals - HSGPA free of SATV
+reg2 <- lm(Uncorrected.Standard.Score ~ chrono_age + mat_ed_qualtrics, data= complete)   # second regression
+complete$resid2 <- resid(reg2)     # second set of residuals - FGPA free of SATV
+cor(complete$resid1, complete$resid2) # correlation of residuals - partial correlation
+
+
+
+ggscatter(complete, x = "resid1", y = "resid2", 
+          add = "reg.line", conf.int = TRUE, 
+          cor.coef = TRUE, cor.method = "pearson",
+          xlab = "RIFG_DR", ylab = "Uncorrected.Standard.Score")
+#ggsave(filename="/Users/julie/Desktop/MRE Data/aim2_images/RIFG_DR.svg", 
+#    width=5, 
+#    height=4, 
+#   pointsize=12)
+```
+
+## 3.3.	Association between viscoelastic measures of stiffness and damping ratio
+```{r}
+pcor.test(x = complete$LIFG_DR  , y = complete$LIFG_stiff, 
+          z = complete[, c("chrono_age","mat_ed_qualtrics")]) #0.02, p = .928
+
+pcor.test(x = complete$RIFG_DR  , y = complete$RIFG_stiff, 
+          z = complete[, c("chrono_age","mat_ed_qualtrics")]) #-0.09, p = .696
+
+pcor.test(x = complete$R_Temp_DR  , y = complete$R_Temp_stiff, 
+          z = complete[, c("chrono_age","mat_ed_qualtrics")]) #-0.30, p = .179
+
+pcor.test(x = complete$L_Temp_DR  , y = complete$L_Temp_stiff, 
+          z = complete[, c("chrono_age","mat_ed_qualtrics")]) #-0.35, p = .108
+
+pcor.test(x = complete$RSMG_stiff  , y = complete$RSMG_DR, 
+          z = complete[, c("chrono_age","mat_ed_qualtrics")]) #-0.15, p = .496
+
+pcor.test(x = complete$LSMG_stiff  , y = complete$LSMG_DR, 
+          z = complete[, c("chrono_age","mat_ed_qualtrics")]) #-0.48, p = .025
+```
+
