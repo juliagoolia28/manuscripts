@@ -1,0 +1,125 @@
+---
+title: "LLD_by_trial_analysis"
+author: "Julie M. Schneider"
+date: "1/11/2022"
+output: html_document
+---
+
+### Import libraries ( you may need to add more here as you go)
+```{r loadlib, echo=T, results='hide', message=F, warning=F}
+library(dplyr);
+library(plyr);
+library(ppcor);
+library(psych);
+library(interactions);
+library(readr);
+library(tidyr);
+library(Hmisc);
+library(tidyverse);
+library(stringr);
+library(reshape2);
+library(svglite);
+library(ggpubr);
+library(lme4);
+library(effectsize);
+
+julie.theme <- theme_bw() + theme(axis.line = element_line(colour = "black"), panel.grid.minor = element_blank(), panel.grid.major = element_blank(), panel.border = element_blank(), panel.background = element_blank(), legend.title= element_blank())  #custom graphics theme for ggplot2
+```
+
+### Load Datasets
+```{r}
+WL_trial <- read.csv('WLNSF_trial_Mplus.csv', check.names = FALSE)
+WL_sub <- read.csv('subjects.csv')
+WL <- read.csv('LLD_rev2_data.csv')
+
+#WL_trial$Participant.ID[!(WL_trial$Participant.ID %in% WL_sub$Participant.ID)]
+#WL_sub$Participant.ID[!(WL_sub$Participant.ID %in% WL_trial$Participant.ID)]
+
+df <- merge(WL_trial,WL_sub, by = "Participant_ID")
+```
+
+### Cast data into long form
+```{r}
+data_long <- gather(df, trial, accuracy, 3:52, factor_key=TRUE)
+data_long
+```
+## Merge long form data and behavioral data
+```{r}
+df_long <- merge(data_long, WL, by = "Participant_ID")
+```
+
+## Analysis 2.1:How does the strength of the effect of SES on inferring new words vary across the school years?
+# Model 1. Logistic Regression with SES
+```{r}
+df_long$accuracy <- as.numeric(df_long$accuracy)
+df_long$trial<-as.numeric(df_long$trial)
+
+df_long$Mat_ed<-as.factor(df_long$Mat_ed)
+df_long$lang_exp_recoded<-as.factor(df_long$lang_exp_recoded)
+
+contrasts(df_long$Mat_ed) = contr.treatment(5)
+
+model <- glmer(accuracy~gender+lang_exp_recoded+Mat_ed+age_months+(1|Participant_ID),family=binomial(link='logit'),data=df_long)
+summary(model)
+effectsize(model)
+
+model2 <- glmer(accuracy~1+gender+lang_exp_recoded+Mat_ed*age_months+(1|Participant_ID),family=binomial(link='logit'),data=df_long)
+summary(model2)
+effectsize(model2)
+
+dev1 <- -2*logLik(model2) # deviance complex model
+dev0 <- -2*logLik(model) # deviance simpler model
+devdiff <- as.numeric(dev0-dev1) # difference in deviances
+dfdiff <- attr(dev1,"df")-attr(dev0,"df") # difference in params (using dfs)
+cat('Chi-square =', devdiff, '(df=', dfdiff,'), p =', 
+  pchisq(devdiff,dfdiff,lower.tail=FALSE))
+```
+# Model 2. Logistic Regression with bilingual experience
+```{r}
+model <- glmer(accuracy~1+gender+lang_exp_recoded+Mat_ed+age_months+(1|Participant_ID),family=binomial(link='logit'),data=df_long)
+summary(model)
+effectsize(model)
+
+model2 <- glmer(accuracy~1+gender+Mat_ed+age_months*lang_exp_recoded+(1|Participant_ID),family=binomial(link='logit'),data=df_long)
+summary(model2)
+effectsize(model2)
+
+dev1 <- -2*logLik(model2) # deviance complex model
+dev0 <- -2*logLik(model) # deviance simpler model
+devdiff <- as.numeric(dev0-dev1) # difference in deviances
+dfdiff <- attr(dev1,"df")-attr(dev0,"df") # difference in params (using dfs)
+cat('Chi-square =', devdiff, '(df=', dfdiff,'), p =', 
+  pchisq(devdiff,dfdiff,lower.tail=FALSE))
+```
+
+# Linear Regression for plotting purposes
+```{r}
+df_long$accuracy <- as.numeric(df_long$accuracy)
+
+WLPC<-df_long %>%
+  group_by(Participant_ID) %>%
+  summarise_at(vars(accuracy), list(avg = mean),na.rm =TRUE)
+
+WL_2<-merge(WL,WLPC, by = "Participant_ID")
+
+Model1 <- lm(avg ~ gender + lang_exp + age_months + MErecode, WL_2)
+Model1.2 <- lm(avg ~ gender + lang_exp + MErecode*age_months, WL_2)
+summary(Model1)
+summary(Model1.2)
+
+check <-WL_2 %>%
+  anti_join(WL_2, 
+            # Define equivalence in column names in both df
+            by = c("avg" = "WL_PC"))
+
+check<-check[,c(1,7,59)]
+
+#pdf("Figs/Q1_regression.pdf")
+interact_plot(Model1.2, pred = age_months, modx = MErecode, plot.points = TRUE)
+#dev.off()
+```
+
+
+
+
+
