@@ -1,0 +1,242 @@
+---
+title: "ERP ERSP OC Word Analysis"
+author: "JM Schneider"
+date: "05/11/2022"
+output: html_document
+---
+
+## Specialty Packages (first pass only)
+```{r}
+#install.packages("remotes")
+#remotes::install_github("norment/normentR")
+```
+
+## Load Libraries
+```{r}
+library(stringr);
+library(dplyr);
+library(sjPlot);
+library(sjmisc);
+library(ggplot2);
+library(interactions);
+library(lme4);
+library(afex);
+library(tidyr);
+library(normentR);
+library(tableone);
+```
+
+## Load data
+```{r}
+ersp <- read.csv('all_ersp_data_new_ROIs.csv')
+erp <- read.csv('erp_combined_new_ROIs.csv')
+erp_subj <- read.csv('erp_subj_order.csv')
+
+subj<-rep(erp_subj$subject_id, each = 40)
+erp$subject_id<-rep(subj, 5)
+#write.csv(erp,'erp_corrected_new_ROIs.csv')
+```
+
+## Keep only positive times in ERSP data & merge ERP/ERSP data
+```{r}
+ersp<-subset(ersp, timebin > 0)
+#write.csv(ersp,'ersp_corrected_new_ROIs.csv')
+```
+
+## Read in Full DF
+```{r}
+df<-read.csv('ersp_erp_oc_df_new_ROIs.csv')
+ast<-read.csv('WLNSF_jms_fieldtrip.csv')
+df$subject_id<-str_remove(df$subject_id, "_WLNSF")
+ast$PPVT.4.SS<-as.numeric(as.character(ast$PPVT.4.SS))
+mat_ed<-read.csv('mat_ed_only.csv')
+mat_ed$subject_id<-str_remove(mat_ed$subject_id, "_EXCLUDE")
+ast$subject_id<-str_remove(ast$subject_id, "_EXCLUDE")
+ast<-merge(ast, mat_ed, by = "subject_id")
+```
+
+# Splice time data into 200 msec time bins
+```{r}
+df$bins<-ifelse(df$timebin >=  100 & df$timebin <  300, "bin1",
+            ifelse(df$timebin >=  300 & df$timebin <  500, "bin2", 
+                 ifelse(df$timebin >=  500 & df$timebin <  700, "bin3", "bin10")))
+
+df_bins<-df %>%
+    group_by(bins,subject_id,cluster_ID) %>%
+    summarise(across(everything(), mean))
+
+df_bins %>%
+  group_by(bins) %>%
+  summarize(cor=cor(theta_pow, erp_combined))
+
+df_bins <- merge(df_bins,ast, by = "subject_id")
+df_bins$GORT_comp<-as.numeric(as.character((df_bins$GORT.V....comp)))
+df_bins$C_ChronologicalAge<-scale(df_bins$ChronologicalAge, scale=FALSE)
+df_bins$z_PPVT.4.SS<-scale(df_bins$PPVT.4.SS, scale=TRUE)
+df_bins$z_GORT_comp<-scale(df_bins$GORT_comp, scale=TRUE)
+df_bins$z_nwr<-scale(df_bins$NWR.PCC, scale=TRUE)
+df_bins$z_twre<-scale(df_bins$TOWRE.TWRE, scale=TRUE)
+
+df_bins$age_cat<-ifelse(df_bins$ChronologicalAge <  9, 8,
+            ifelse(df_bins$ChronologicalAge >=  9 & df_bins$ChronologicalAge <  10,9, 
+                 ifelse(df_bins$ChronologicalAge >= 10 & df_bins$ChronologicalAge <  11, 10,
+                        ifelse(df_bins$ChronologicalAge >= 11 & df_bins$ChronologicalAge <  12, 11,
+                              ifelse(df_bins$ChronologicalAge >= 12 & df_bins$ChronologicalAge <  13, 12,
+                                    ifelse(df_bins$ChronologicalAge >= 13 & df_bins$ChronologicalAge <  14, 13,
+                                          ifelse(df_bins$ChronologicalAge >= 14 & df_bins$ChronologicalAge <  15, 14,
+                                                ifelse(df_bins$ChronologicalAge >= 15 & df_bins$ChronologicalAge <  16, 15,
+                                                       ifelse(df_bins$ChronologicalAge >= 16 & df_bins$ChronologicalAge <  17, 16,"ageNA")))))))))
+
+df_bins$age_cat<-as.factor(df_bins$age_cat)
+df_bins$cluster_ID<-as.factor(df_bins$cluster_ID)
+
+df_bins %>%
+  group_by(cluster_ID, bins) %>%
+  summarize(cor=cor(theta_pow, erp_combined))
+
+bin1 <- subset(df_bins, bins == 'bin1')
+bin2 <- subset(df_bins, bins == 'bin2')
+bin3 <- subset(df_bins, bins == 'bin3')
+
+mat_ed_count<-df_bins %>% group_by(subject_id) %>% tally(unique(mat_ed))
+```
+
+# RQ: For content words, what predicts the amplitude of the N400 and theta?
+# Overview of results: The N400 and theta amplitude are not associated in the LC ROI. What appears to account for this is increasing age for theta, and increasing vocabulary knowledge for ERPs. 
+#RQ sub-question1: N400 amplitude
+```{r}
+bin2$C_mat_ed<-scale(bin2$mat_ed, scale = FALSE)
+
+lmer_erp_2<-lmer(erp_combined~ 1+C_mat_ed+theta_pow:cluster_ID+C_ChronologicalAge:cluster_ID+z_PPVT.4.SS:cluster_ID+z_GORT_comp:cluster_ID+z_nwr:cluster_ID+(1|subject_id), data=bin2)
+summary(lmer_erp_2)
+
+summary(lmer_erp_2)$coefficients  
+#write.csv(summary(lmer_erp_2)$coefficients, 'erp_lmer_output.csv')
+```
+# Plot ERP Amplitude Relationships
+```{r}
+#svg("correlation_erp_ersp.svg")
+plot_model(lmer_erp_2, type = "pred", terms = c("theta_pow","cluster_ID"))
+#dev.off() 
+```
+
+#RQ sub-question2: Theta amplitude
+```{r}
+lmer_theta_2<-lmer(theta_pow~ 1+C_mat_ed+erp_combined:cluster_ID+C_ChronologicalAge:cluster_ID+z_PPVT.4.SS:cluster_ID+z_GORT_comp:cluster_ID+z_nwr:cluster_ID+ (1|subject_id), data=bin2)
+summary(lmer_theta_2)
+
+summary(lmer_theta_2)$coefficients  
+#write.csv(summary(lmer_theta_2)$coefficients, 'ersp_lmer_output.csv')
+```
+
+## Exploratory (not included in manuscript)
+## Plotting the time series data for ERPs across ages
+```{r}
+erp$subject_id<-str_remove(erp$subject_id, "_WLNSF")
+erp<-merge(erp,ast, by = "subject_id" )
+
+erp$age_cat<-ifelse(erp$ChronologicalAge <  10, "8-9",
+            ifelse(erp$ChronologicalAge >=  10 & erp$ChronologicalAge <  12,"10-11", 
+                 ifelse(erp$ChronologicalAge >= 12 & erp$ChronologicalAge <  14, "12-13",
+                        ifelse(erp$ChronologicalAge >= 14 & erp$ChronologicalAge <  16, "14-15","ageNA"))))
+
+erp_subset <- erp[c(1:5,20)]
+
+erp_avg<-erp_subset %>%
+    group_by(age_cat, timebin, cluster_ID) %>%
+    summarise(across(everything(), mean))
+
+erp_avg %>% 
+  filter(cluster_ID %in% c("ROI_F"))  %>%
+  ggplot( aes(x=timebin, y=erp_combined, group=age_cat, color=age_cat)) +
+    geom_line()
+```
+## Plotting the time series data for ERPs  based on PPVT
+```{r}
+quantile(erp$PPVT.4.SS)
+##   0%  25%  50%  75% 100% 
+##  57   96  109  120  152 
+
+erp$ppvt_cat<-ifelse(erp$PPVT.4.SS <=  96, "Low Vocabulary",
+            ifelse(erp$PPVT.4.SS >=  120,"High Vocabulary", "Average Vocabulary"))
+
+erp_subset <- erp[c(1:5,21)]
+
+erp_avg<-erp_subset %>%
+    group_by(ppvt_cat, timebin, cluster_ID) %>%
+    summarise(across(everything(), mean))
+
+erp_avg %>% 
+  filter(cluster_ID %in% c("ROI_LC"))  %>%
+  ggplot( aes(x=timebin, y=erp_combined, group=ppvt_cat, color=ppvt_cat)) +
+    geom_smooth(method = "loess")
+
+colors <- norment_pal(palette = "logo")(3)
+
+ERPplot<-erp_avg %>% 
+  filter(cluster_ID %in% c("ROI_LC"))  %>%
+  ggplot( aes(x=timebin, y=erp_combined, group=ppvt_cat, color=ppvt_cat))  + 
+  geom_line(size = 0.75) + 
+  scale_color_manual(values = colors) + 
+  scale_fill_manual(values = colors) + 
+  scale_x_continuous(breaks = c(seq(-100,800,100))) + 
+  #scale_y_continuous(breaks = c(seq(-.5,-,2))) + 
+  coord_cartesian() +
+  labs(x = "Time (ms)", 
+       y = "Amplitude (µV)") + 
+  theme_norment(ticks = TRUE, grid = FALSE) +
+  theme(
+    legend.position = c(0.9,0.1),
+    axis.text.x = element_text(vjust = -0.1))
+  
+shift_axes(ERPplot, x = 0, y = 0)
+#ERPplot
+
+## Export data to plot in ERPlab
+erp_subset <- erp[c(1,20,21)]
+erp_export <-distinct(erp_subset,subject_id,.keep_all = TRUE)
+write.csv(erp_export,"age_ppvt_group_ID.csv")
+```
+
+## Plotting the time series data for ERSPs
+```{r}
+ersp <- read.csv('all_ersp_data.csv')
+
+ersp$subject_id<-str_remove(ersp$subject_id, "_WLNSF")
+ersp<-merge(ersp,ast, by = "subject_id" )
+
+ersp$age_cat<-ifelse(ersp$ChronologicalAge <  10, "8-9",
+            ifelse(ersp$ChronologicalAge >=  10 & ersp$ChronologicalAge <  12,"10-11", 
+                 ifelse(ersp$ChronologicalAge >= 12 & ersp$ChronologicalAge <  14, "12-13",
+                        ifelse(ersp$ChronologicalAge >= 14 & ersp$ChronologicalAge <  16, "14-15","ageNA"))))
+
+ersp_subset <- ersp[c(1:3,7,8,23)]
+
+ersp_avg<-ersp_subset %>%
+    group_by(age_cat, timebin, cluster_ID) %>%
+    summarise(across(everything(), mean))
+
+ersp_avg %>% 
+  filter(cluster_ID %in% c("ROI_LC"))  %>%
+  ggplot( aes(x=timebin, y=theta_pow, group=age_cat, color=age_cat)) +
+    geom_line()
+```
+
+## Create a Table of Demographic Data sorted by Age Groups
+```{r}
+ast<-merge(ast,mat_ed_count, by = "subject_id")
+ast$age_cat<-ifelse(ast$ChronologicalAge <  10, "8-9",
+            ifelse(ast$ChronologicalAge >=  10 & ast$ChronologicalAge <  12,"10-11", 
+                 ifelse(ast$ChronologicalAge >= 12 & ast$ChronologicalAge <  14, "12-13",
+                        ifelse(ast$ChronologicalAge >= 14 & ast$ChronologicalAge <  16, "14-15","ageNA"))))
+
+ast$GORT.V....comp<-as.numeric(as.character(ast$GORT.V....comp))
+ast$mat_ed<-as.factor(ast$mat_ed)
+
+myvars <- c("ChronologicalAge","PPVT.4.SS","GORT.V....comp","NWR.PCC", "mat_ed")
+
+table2 <- CreateTableOne(myvars, ast, strata = c("age_cat"))
+table2
+#write.table(table2, file = "demo_table.txt", sep = ",", quote = FALSE, row.names = T)
+
+```
