@@ -1,0 +1,5 @@
+parcel_numbers,is_significant,count_in_parcel,nvoxels_in_parcel,peak_labels,max_intersect_labels
+1,0,8,13,Right_Lateral_Occipital_Cortex_superoir_division,Right_Lateral_Occipital_Cortex_superoir_division
+2,0,5,6,Left_Supramarginal_Gyrus_posterior_division,Left_Supramarginal_Gyrus_posterior_division
+3,0,7,6,Right_Middle_Frontal_Gyrus,Right_Middle_Frontal_Gyrus
+4,0,7,4,Left_Postcentral_Gyrus,Left_Postcentral_Gyrus

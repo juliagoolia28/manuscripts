@@ -1,0 +1,5 @@
+</pre><hr>Initialisation<br><pre>
+
+/usr/local/fsl/bin/fslmaths /Users/julie/Library/CloudStorage/Box-Box/My_Collaborations/fMRI_langlocssl/data/input_data/langloc_raw_data/preproc/sub-blasta001_task-langloc_run-01_space-MNI152NLin2009cAsym_desc-preproc_bold_resampled prefiltered_func_data -odt float
+Total original volumes = 1
+Error - prefiltered_func_data has a different number of time points to that in FEAT setup

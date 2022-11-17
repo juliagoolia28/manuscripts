@@ -1,0 +1,29 @@
+
+/bin/cp /Users/julie/Library/CloudStorage/Box-Box/My_Collaborations/fMRI_langlocssl/data/input_data/langloc_raw_data/firstlevel/langloc_order1_design.fsf design.fsf
+
+/usr/local/fsl/bin/feat_model design
+
+mkdir .files;cp /usr/local/fsl/doc/fsl.css .files;cp -r /usr/local/fsl/doc/images .files/images
+
+/usr/local/fsl/bin/fsl_sub -T 10 -l logs -N feat0_init   /usr/local/fsl/bin/feat /Users/julie/Library/CloudStorage/Box-Box/My_Collaborations/fMRI_langlocssl/data/input_data/langloc_raw_data/preproc/sub-blasta001_task-langloc_run-01_space-MNI152NLin2009cAsym_desc-preproc_bold_resampled_langloc.feat/design.fsf -D /Users/julie/Library/CloudStorage/Box-Box/My_Collaborations/fMRI_langlocssl/data/input_data/langloc_raw_data/preproc/sub-blasta001_task-langloc_run-01_space-MNI152NLin2009cAsym_desc-preproc_bold_resampled_langloc.feat -I 1 -init
+5189
+
+/usr/local/fsl/bin/fsl_sub -T 165 -l logs -N feat2_pre -j 5189  /usr/local/fsl/bin/feat /Users/julie/Library/CloudStorage/Box-Box/My_Collaborations/fMRI_langlocssl/data/input_data/langloc_raw_data/preproc/sub-blasta001_task-langloc_run-01_space-MNI152NLin2009cAsym_desc-preproc_bold_resampled_langloc.feat/design.fsf -D /Users/julie/Library/CloudStorage/Box-Box/My_Collaborations/fMRI_langlocssl/data/input_data/langloc_raw_data/preproc/sub-blasta001_task-langloc_run-01_space-MNI152NLin2009cAsym_desc-preproc_bold_resampled_langloc.feat -I 1 -prestats
+Error submitting job - child process exited abnormally
+    while executing
+"if { [ catch {
+
+for { set argindex 1 } { $argindex < $argc } { incr argindex 1 } {
+    switch -- [ lindex $argv $argindex ] {
+
+	-I {
+	    incr arginde..."
+    (file "/usr/local/fsl/bin/feat" line 312)
+
+
+FATAL ERROR ENCOUNTERED:
+COMMAND:
+/usr/local/fsl/bin/fsl_sub -T 165 -l logs -N feat2_pre -j 5189  /usr/local/fsl/bin/feat /Users/julie/Library/CloudStorage/Box-Box/My_Collaborations/fMRI_langlocssl/data/input_data/langloc_raw_data/preproc/sub-blasta001_task-langloc_run-01_space-MNI152NLin2009cAsym_desc-preproc_bold_resampled_langloc.feat/design.fsf -D /Users/julie/Library/CloudStorage/Box-Box/My_Collaborations/fMRI_langlocssl/data/input_data/langloc_raw_data/preproc/sub-blasta001_task-langloc_run-01_space-MNI152NLin2009cAsym_desc-preproc_bold_resampled_langloc.feat -I 1 -prestats
+ERROR MESSAGE:
+child process exited abnormally
+END OF ERROR MESSAGE

@@ -1,0 +1,208 @@
+---
+title: "blast_ssl_langloc_adult_fMRI_analysis"
+author: "JM Schneider"
+date: "10/28/2020"
+output: html_document
+---
+
+```{r, include=FALSE}
+library(ggplot2); 
+library(nlme); 
+library(reshape)
+library(Hmisc); 
+library(lme4); 
+library(lmerTest); 
+library(plyr); 
+library(ggpubr);
+library(corrplot);
+library(afex);
+library(tidyverse)
+library(hrbrthemes)
+library(viridis)
+#library(R.matlab);
+```
+
+## General: Load behavioral dataframes
+```{r}
+df <- read.csv("behavioral_data.csv")
+```
+
+## About this sample: Demographics and Behavioral Data
+## Demographic Data
+```{r}
+demographics = read.csv("blast_adult_demographics.csv")
+demographics <- merge(demographics,df, by ="subject")
+mean(demographics$Age)
+sd(demographics$Age)
+
+dplyr::count(demographics, Gender) 
+
+## recalculate without blast_a_028 (too few hits)
+df<- df[!grepl("blast_a_028", df$subject),]
+
+demographics = read.csv("blast_adult_demographics.csv")
+demographics <- merge(demographics,df, by ="subject")
+mean(demographics$Age)
+sd(demographics$Age)
+
+dplyr::count(demographics, Gender) 
+```
+
+## Analysis 3.1: Auditory SL performance
+```{r}
+df$structured_syllable_mean_rt=as.numeric(as.character(df$structured_syllable_mean_rt))
+df$structured_ssl_rt_slope=as.numeric(as.character(df$structured_ssl_rt_slope))
+df$random_ssl_rt_slope=as.numeric(as.character(df$random_ssl_rt_slope))
+df$SSL_accuracy=as.numeric(as.character(df$SSL_accuracy))
+df$mean_rt=as.numeric(as.character(df$mean_rt))
+df$scaled_rt_slope=as.numeric(as.character(df$scaled_rt_slope))
+df$ssl_rt_slope_diff <- (df$structured_ssl_rt_slope-df$random_ssl_rt_slope)
+
+t.test(df$structured_syllable_mean_rt, df$random_syllable_mean_rt, paired = TRUE, alternative = "less")
+```
+
+## Analysis 3.2 (Figure 4 & Supplementary Table 1): Are there similarities in cortical architecture between SL and language processing?
+```{r}
+# Load libraries
+library(ggplot2)
+library(dplyr)
+library(lsmeans)
+library(lme4)
+library(stringr)
+library(rstatix)
+library(reshape2)
+
+#Read in file to plot
+run1 <- read.csv('RQ1/structured/structured_rest_run1_contrast_froi_resp_mag.csv')
+run2 <- read.csv('RQ1/structured/structured_rest_run2_contrast_froi_resp_mag.csv')
+run3 <- read.csv('RQ1/random/random_rest_run3_contrast_froi_resp_mag.csv')
+run4 <- read.csv('RQ1/random/random_rest_run4_contrast_froi_resp_mag.csv')
+
+# average across dataframes
+library(abind)
+
+arr = abind(run1, run2,  along = 3)
+lang_loc_structured <- rowMeans(arr, dims = 2)
+lang_loc_structured_1 <- lang_loc_structured %>% cbind("Condition" = "Structured")
+
+arr = abind(run3, run4,  along = 3)
+lang_loc_random <- rowMeans(arr, dims = 2)
+lang_loc_random_1 <- lang_loc_random %>% cbind("Condition" = "Random")
+
+# create data frames
+lang_loc_1 <- rbind(lang_loc_structured_1, lang_loc_random_1)
+names <- colnames(lang_loc_1)
+names <- head(names, -1)
+##tst <- aggregate(lang_loc_structured_random, by = list(Group = "Group", Names = colnames), FUN = mean, sd)
+#lang_loc_summarised <- group_by(lang_loc_structured_random, Group, .dots = names) %>% 
+  #summarise(Mean = mean(names)) 
+
+# setting up for comparison
+lang_loc_str_full <- melt(lang_loc_structured) %>%
+  cbind("Condition" = "Structured")
+lang_loc_rand_full <- melt(lang_loc_random) %>%
+  cbind("Condition" = "Random")
+lang_loc_full = rbind(lang_loc_str_full, lang_loc_rand_full)
+lang_loc_full$comp <- str_c(lang_loc_full$Condition, '_', lang_loc_full$variable)
+# comparison
+stat.test <- group_by(lang_loc_full, Var2) %>%
+  t_test(value ~ Condition, p.adjust.method = "bonferroni")
+stat.test %>% select(-.y., -group1, -group2,-n1,-n2)
+
+#setting up for graph
+lang_loc_structured <- as.data.frame(lang_loc_structured)
+lang_loc_summarised_str_Mean <- summarise_all(lang_loc_structured, mean) %>%
+  melt() %>% 
+  dplyr::rename(Mean = value)
+lang_loc_summarised_str_SD <- summarise_all(lang_loc_structured, sd)  %>%
+  melt() %>% 
+  dplyr::rename(SD = value)
+lang_loc_summarised_str <- cbind(lang_loc_summarised_str_Mean, lang_loc_summarised_str_SD[2]) %>%
+  cbind("Condition" = "Structured")
+
+lang_loc_random <- as.data.frame(lang_loc_random)
+lang_loc_summarised_rand_Mean <- summarise_all(lang_loc_random, mean) %>%
+  melt() %>% 
+  dplyr::rename(Mean = value)
+lang_loc_summarised_rand_SD <- summarise_all(lang_loc_random, sd)  %>%
+  melt() %>% 
+  dplyr::rename(SD = value)
+lang_loc_summarised_rand <- cbind(lang_loc_summarised_rand_Mean, lang_loc_summarised_rand_SD[2]) %>%
+  cbind("Condition" = "Random")
+lang_loc_summarised <- rbind(lang_loc_summarised_str, lang_loc_summarised_rand)
+
+# graphing
+cbPalette <- c('#a6cee3','#1f78b4','#b2df8a', '#66c2a5','#fc8d62','#8da0cb', '#1b9e77','#d95f02','#7570b3')
+
+lang_loc_str <- ggplot(lang_loc_summarised, aes(x = variable, y = Mean, fill = Condition)) +
+  geom_bar(stat="identity", position = position_dodge()) +
+  geom_errorbar(aes(ymin=Mean-SD, ymax=Mean+SD), width=.2, position = position_dodge(.9)) +
+  theme(
+    legend.text = element_text(size = 22, face = "bold"),
+    legend.title = element_text(size = 22, face = "bold")
+  ) + 
+  theme(
+    panel.background = element_rect(fill = "white"),
+    legend.key  = element_rect(fill = "white"),
+    axis.line.x = element_line(colour = "black", size = 1),
+    axis.line.y = element_line(colour = "black", size = 1)) +
+  labs(title = "Mean Top 10% Voxels for Language Localizor Parcels", 
+       x = "Language Areas",  
+       y = "Mean Value of Voxels") +
+  scale_fill_manual(values = c(cbPalette[1], cbPalette[8])) +
+  theme(plot.title = element_text(hjust = 0.35)) +
+  theme(
+    plot.title = element_text(size = 26, face = "bold"),
+    axis.title.x = element_text(size = 21, face = "bold"),
+    axis.title.y = element_text(size = 16, face = "bold"),
+    axis.text = element_text(size = 16, face = "bold"),
+    axis.text.x = element_text(angle = -90)
+  ) 
+
+lang_loc_str  
+
+
+# Save your plot
+#ggsave("/Volumes/data/users/julie/make_parcels-julie/data/froi_analysis_results/ssl_v_rest/first-level/LanguageLocalizorRandvsStr.png", bg="transparent", width = 30, height = 18, units = "cm")
+
+
+## Correlations between the activation magnitude in these four regions (structured – random) and response time differences (structured – random)
+
+# Remove outlier (blast_a_028)
+lang_loc_structured<-lang_loc_structured[-c(18), ]  
+lang_loc_random<-lang_loc_random[-c(18), ]  
+
+df$parcel_1_diff<-lang_loc_structured$parcel_1-lang_loc_random$parcel_1
+df$parcel_2_diff<-lang_loc_structured$parcel_2-lang_loc_random$parcel_2
+df$parcel_4_diff<-lang_loc_structured$parcel_4-lang_loc_random$parcel_4
+df$parcel_6_diff<-lang_loc_structured$parcel_6-lang_loc_random$parcel_6
+df$ssl_rt_mean_diff <-df$structured_syllable_mean_rt-df$random_syllable_mean_rt
+
+cor.test(df$parcel_1_diff,df$ssl_rt_mean_diff, method = 'pearson')
+cor.test(df$parcel_2_diff,df$ssl_rt_mean_diff, method = 'pearson')
+cor.test(df$parcel_4_diff,df$ssl_rt_mean_diff, method = 'pearson')
+cor.test(df$parcel_6_diff,df$ssl_rt_mean_diff, method = 'pearson')
+
+```
+### Supplementary Table 2: Response magnitude 
+```{r}
+corr_df = read.csv("supp_table_2/rval_in_parcel.csv")
+z_df = read.csv("supp_table_2/fisherZ_in_parcel.csv")
+
+t.test(corr_df$parcel_1, mu = 0, alternative = "two.sided")
+t.test(corr_df$parcel_2, mu = 0, alternative = "two.sided")
+t.test(corr_df$parcel_4, mu = 0, alternative = "two.sided")
+t.test(corr_df$parcel_6, mu = 0, alternative = "two.sided")
+
+apply(corr_df,2,median)
+
+corr_df <- corr_df[c(1,2,4,6)]
+library(tidyr)
+library(ggplot2)
+long <- corr_df %>% gather(parcel, value)
+p1<-ggplot(long, aes(x=parcel, y=value, fill=parcel)) + 
+    geom_boxplot() 
+p1 + theme_minimal()
+#ggsave(file="parcel_rval_wide.svg", plot=p1, width=7, height=3)
+
+```

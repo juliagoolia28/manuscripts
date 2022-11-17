@@ -1,0 +1,16 @@
+#!/bin/bash -l
+
+#$ -l h_rt=12:00:00   # Specify the hard time limit for the job
+#$ -N tls_ssl   # Give job a name
+#$ -j y               # Merge the error and output streams into a single file
+#$ -P perlab          # project name
+#$ -wd /projectnb/perlab/users/tlscott/SSL/logs/
+
+conjunction_paper_env
+
+cd /projectnb/perlab/users/tlscott/SSL/code
+
+matlab -nodisplay -singleCompThread -r "run_ssl_lpsa({'"${SUBJ}"'})"
+
+
+

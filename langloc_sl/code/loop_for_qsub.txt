@@ -1,0 +1,7 @@
+cat /projectnb/perlab/users/tlscott/SSL/data/subjects.txt | while read subj || [[ -n $subj ]];
+do
+
+qsub -v SUBJ=$subj lpsa_job
+
+
+done
