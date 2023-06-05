@@ -7,8 +7,8 @@ Greetings! This code is modified from Dr. Terri Scott (https://github.com/tlscot
 
 <li>Fedorenko, E., Hsieh, P.-J., Nieto-Castañon, A., Whitfield-Gabrieli, S. & Kanwisher, N. (2010). A new method for fMRI investigations of language: Defining ROIs functionally in individual subjects. Journal of Neurophysiology, 104(2), 1177-94. DOI: 10.1152/jn.00032.2010.<br> https://pubmed.ncbi.nlm.nih.gov/20410363/</li> 
 <li>Julian, J., Fedorenko, E., Webster, J. & Kanwisher, N. (2012). An algorithmic method for functionally defining regions of interest in the ventral visual pathway. Neuroimage, 60(4), 2357-2364. DOI: 10.1016/j.neuroimage.2012.02.055.<br> https://pubmed.ncbi.nlm.nih.gov/22398396/</li>
+<li>Malik-Moraleda S, Ayyash D, Gallée J, Affourtit J, Hoffmann M, Mineroff Z, et al. (2022): An investigation across 45 languages and 12 language families reveals a universal language network. Nat Neurosci 2022 258 25: 1014–1019.</li> 
 <br>
-
 When using, please cite her paper: 
 <li>Scott, T.L. and Perrachione, T.K. (2019). Common cortical architectures for phonological working memory identified in individual brains. NeuroImage, 202, 116096. DOI: 10.1016/j.neuroimage.2019.116096.<br> https://pubmed.ncbi.nlm.nih.gov/31415882/</li>
 
