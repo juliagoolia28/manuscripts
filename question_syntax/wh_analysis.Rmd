@@ -1,0 +1,378 @@
+---
+title: "mothers_questions_analysis"
+author: "Grace Buckalew"
+output: html_document
+---
+## Import Libraries
+```{r}
+library(dplyr)
+library(tidyr);
+library(tidyverse);
+library(stats);
+library(psych);
+library(tidyverse);
+library(ggpubr);
+library(rstatix);
+library(broom);
+library(effectsize);
+#library(multcomp);
+library(knitr);
+```
+## Import Data
+### NOTE: Before you do this, make sure you have the most up to date data downloaded and saved as a .csv to this folder
+```{r}
+wh_df<-read.csv('master_wh_coded.csv')
+wh_codes_df<-read.csv('WCT.csv')
+sllip_df<-read.csv('sllip_redcap_data_2.csv')
+smr_df <-read.csv('smr_N41.csv')
+delv_df <- read.csv('delv_subtests.csv')
+wh_codes_long <- read.csv('wh_numb_composite.csv', header = TRUE)
+
+names(sllip_df)[85]<-"child_ethnicity"
+names(sllip_df)[86]<-"mother_ethnicity"
+names(sllip_df)[87]<-"father_ethnicity"
+
+names(sllip_df)[90]<-"child_race"
+names(sllip_df)[91]<-"mother_race"
+names(sllip_df)[92]<-"father_race"
+
+table(sllip_df$child_ethnicity)
+table(sllip_df$child_race)
+```
+
+## Clean Master WH Coded
+```{r}
+group <- data.frame(group = rep(c("child", "parent"), 38))
+parents_only <- data.frame(wh_df, group)
+parents_only <- parents_only %>% filter(group != "child")
+
+parents_only$subject_ID<-str_remove(parents_only$subject_ID, "SLLIP_")
+parents_only$subject_ID<-str_remove(parents_only$subject_ID, "_PARENT")
+parents_only$subject_ID<-str_remove(parents_only$subject_ID, " PARENT")
+
+parents_only$subject_ID<-as.numeric(parents_only$subject_ID)
+
+wh_codes_df$subject_ID<-str_remove(wh_codes_df$subject_ID, "sllip_")
+wh_codes_df$subject_ID<-str_remove(wh_codes_df$subject_ID, "sllip")
+wh_codes_df$subject_ID<-as.numeric(wh_codes_df$subject_ID)
+
+wh_codes_df$subject_ID<-as.numeric(wh_codes_df$subject_ID)
+
+parents_only <- merge(wh_codes_df,parents_only, by = "subject_ID")
+```
+
+## Merge Datasets
+```{r}
+names(wh_codes_long)[1] <- "subject_ID"
+df<- merge(wh_codes_long,smr_df, by = "subject_ID")
+df<-merge(df,delv_df, by = "subject_ID") ## 032 does not have DELV data
+
+df$subject_ID<-str_remove(df$subject_ID, "sllip_")
+df$subject_ID<-str_remove(df$subject_ID, "sllip")
+df$subject_ID<-as.numeric(df$subject_ID)
+
+sllip_df<-sllip_df[,c(1,7,32,85,86,90,100,103:106,116:118,125,126)]
+df<- merge(df, sllip_df, by = "subject_ID")
+df_long<- merge(df, parents_only, by = "subject_ID")
+```
+
+## Compute proportion of WH based on total parent word count
+```{r}
+df_long$prop_WH <- df_long$SUM.OF.WH/df_long$Parent.WC
+```
+
+## combine demographic data and question data; get demographic information
+```{r}
+beh_df<- merge(parents_only, sllip_df, by = "subject_ID")
+table(beh_df$mat_ed_qualtrics)
+table(beh_df$child_ethnicity)
+table(beh_df$mother_ethnicity)
+table(beh_df$child_race)
+```
+
+## 3.1	Standardized measures of syntactic development are correlated with child syntactic production
+```{r}
+smr_df$subject_ID<-str_remove(smr_df$subject_ID, "sllip_")
+smr_df$subject_ID<-str_remove(smr_df$subject_ID, "sllip")
+smr_df$subject_ID<-as.numeric(smr_df$subject_ID)
+beh_df<- merge(beh_df, smr_df, by = "subject_ID")
+
+summary(lm(beh_df$Child.MLU~beh_df$chrono_age+beh_df$Child.utterances + beh_df$delv_raw_score))
+
+summary(lm(beh_df$Child.Morphemes~beh_df$chrono_age+beh_df$Child.utterances + beh_df$delv_raw_score))
+```
+
+## RQ1: What type of questions do children experience most from their mothers at school entry? 
+### RMANOVA: question type x wh type
+```{r}
+WCT_long<-read.csv("WCT_long.csv")
+WCT_long$subject_ID<-str_remove(WCT_long$subject_ID, "sllip_")
+WCT_long$subject_ID<-as.numeric(WCT_long$subject_ID)
+WCT_long<-merge(WCT_long,smr_df, by = "subject_ID")
+WCT_long<-merge(WCT_long,sllip_df, by = "subject_ID")
+
+WCT_long$type<-as.factor(as.character(WCT_long$type))
+WCT_long$wh_type<-as.factor(as.character(WCT_long$wh_type))
+
+WCT_long %>%
+  group_by(type, wh_type) %>%
+  get_summary_stats(frequency, type = "mean_sd")
+
+bxp <- ggboxplot(
+  WCT_long, x = "type", y = "frequency",
+  color = "wh_type", palette = "jco"
+  )
+bxp
+
+#m <- aov(frequency~type*wh_type+chrono_age+Parent.utterances+Child.utterances+Error(subject_ID/(type*wh_type)), data = WCT_long)
+m <- aov(frequency~type*wh_type+chrono_age+Parent.utterances+Child.utterances, data = WCT_long)
+summary(m)
+
+#define the post hoc comparisons to make
+WCT_long %>%
+  group_by(type) %>%
+  anova_test(frequency~wh_type+chrono_age+Parent.utterances+Child.utterances)
+
+pwc <- WCT_long %>% 
+  group_by(type) %>%
+  emmeans_test(
+    frequency~wh_type, covariate = c(chrono_age,Parent.utterances,Child.utterances),
+    p.adjust.method = "bonferroni"
+    )
+pwc %>% filter(type == "info")
+pwc %>% filter(type == "ped")
+pwc %>% filter(type == "rhet")
+
+WCT_long %>%
+  group_by(type) %>%
+    summarise_at(vars(frequency), list(name = sd))
+
+```
+
+## sub-RQ1: Do parents ask more information seeking, pedagogical or non-informative/rhetorical questions?
+## ANSWER: Children hear significantly more rhetorical questions than info seeking & pedagogical. 
+```{r}
+smr_df$subject_ID<-str_remove(smr_df$subject_ID, "sllip_")
+smr_df$subject_ID<-str_remove(smr_df$subject_ID, "sllip")
+smr_df$subject_ID<-as.numeric(smr_df$subject_ID)
+
+smr_df$subject_ID<-as.numeric(smr_df$subject_ID)
+
+# Subset the columns you are interested in from the df
+subseta <- merge(wh_codes_df,smr_df, by = "subject_ID")
+
+# Make sure all the data is numeric
+subseta$info_seek<-as.numeric(subseta$info_seek)
+subseta$rhetorical<-as.numeric(subseta$rhetorical)
+subseta$pedagogical<-as.numeric(subseta$pedagogical)
+
+subseta <- subseta[c(1:6)]
+# Change the format from wide to long
+data_long <- gather(subseta, type, freq, 2:4, factor_key=TRUE)
+data_long
+
+res.aov <- data_long %>% anova_test(freq ~ Parent.utterances + type) ##covariate has to go first
+get_anova_table(res.aov)
+
+## pairwise comparison
+library(emmeans)
+pwc <- data_long %>% 
+  emmeans_test(
+    freq ~ type, covariate = Parent.utterances,
+    p.adjust.method = "bonferroni"
+    )
+pwc
+
+get_emmeans(pwc)
+
+## plot the comparison
+pwc <- pwc %>% add_xy_position(x = "type", fun = "mean_se")
+ggline(get_emmeans(pwc), x = "type", y = "emmean") +
+  geom_errorbar(aes(ymin = conf.low, ymax = conf.high), width = 0.2) + 
+  stat_pvalue_manual(pwc, hide.ns = TRUE, tip.length = FALSE) +
+  labs(
+    subtitle = get_test_label(res.aov, detailed = TRUE),
+    caption = get_pwc_label(pwc)
+  )
+```
+## Frequency of WH-questions within each type (open-versus closed)
+```{r}
+wh_codes_long<- wh_codes_long[!grepl("sllip_032", wh_codes_long$subject_ID),]
+wh_long <-gather(wh_codes_long, condition, freq, info_seek:rhetorical, factor_key=TRUE)
+wh_long
+
+wh_long$Word.Class <- as.factor(wh_long$Word.Class)
+
+library(dplyr)
+df.summary <- wh_long %>%
+  group_by(Word.Class,condition) %>%
+  summarise(
+    sd = sd(freq, na.rm = TRUE),
+    len = mean(freq)
+  )
+
+df.summary
+
+ggplot(df.summary, aes(Word.Class,len)) +
+  geom_col(aes(fill = condition), position = position_dodge(0.8), width = 0.7)+
+  geom_errorbar(
+    aes(ymin = len-sd, ymax = len+sd, group = condition),
+    width = 0.2, position = position_dodge(0.8)
+    )+
+  scale_fill_manual(values = c("#00AFBB", "#E7B800","#1B9E77"))
+
+```
+
+## sub-RQ1: Do parents ask more WH questions than non-WH questions? 
+## ANSWER: Parents ask way more Non WH questions than they do WH questions
+```{r}
+## compute a t-test comparing the number of wh questions to the number of non-wh questions
+# see if you can find a t-test where you include a covariate
+t.test(parents_only$SUM.OF.WH,parents_only$NON.WH.SUM, paired = TRUE)
+mean(parents_only$SUM.OF.WH)
+mean(parents_only$NON.WH.SUM)
+sd(parents_only$SUM.OF.WH)
+sd(parents_only$NON.WH.SUM)
+```
+## Plot of WH-questions:
+```{r}
+test<-parents_only[ , c(12,14)]
+test = gather(test, type, value,SUM.OF.WH:NON.WH.SUM, factor_key=TRUE)
+test
+
+p<-ggplot(test, aes(x=type, y=value, fill=type)) +
+  geom_bar(stat="summary")+scale_fill_brewer(palette="Dark2")
+ggsave(file="wh_v_nonwh.svg", plot=p, width=5, height=5)
+p
+```
+
+## RQ2: How does maternal question use relate to child language outcomes at school entry?
+## Does the total number of WH questions asked by parents relate to children's syntactic development, above and beyond non-wh questions?
+# ANSWER:Sum of WH questions predicts delv scores, when controlling for total number of utterances.
+```{r}
+parents_only <- merge(smr_df,parents_only,by="subject_ID")
+parents_only <- merge(sllip_df,parents_only,by="subject_ID")
+
+delv_df$subject_ID<-str_remove(delv_df$subject_ID, "sllip_")
+delv_df$subject_ID<-str_remove(delv_df$subject_ID, "sllip")
+delv_df$subject_ID<-as.numeric(delv_df$subject_ID)
+parents_only <- merge(delv_df,parents_only,by="subject_ID")
+
+parents_only$prop_WH<-parents_only$SUM.OF.WH/parents_only$Parent.utterances
+
+parents_subset <- parents_only[c(1, 14,11,21,22,28,30,63,65)]
+
+parents_subset <- parents_subset %>%
+  gather(key = "wh_form", value = "frequency", SUM.OF.WH, NON.WH.SUM) %>%
+  convert_as_factor(wh_form, subject_ID)
+
+parents_subset %>%
+  group_by(wh_form) %>%
+  get_summary_stats(frequency, type = "mean_sd")
+
+summary(delv_model<-lm(parents_only$delv_adjust_scaled ~ parents_only$Parent.utterances +parents_only$Child.utterances+  parents_only$chrono_age +parents_only$SUM.OF.WH+parents_only$NON.WH.SUM))
+
+summary(delv_model<-lm(parents_only$Child.MLU ~ parents_only$Parent.utterances +parents_only$Child.utterances+ parents_only$chrono_age + parents_only$SUM.OF.WH+parents_only$NON.WH.SUM))
+
+summary(delv_model<-lm(parents_only$Child.Morphemes ~ parents_only$Parent.utterances +parents_only$Child.utterances+ parents_only$chrono_age +parents_only$SUM.OF.WH+parents_only$NON.WH.SUM))
+
+ggplt <- ggplot(parents_subset,aes(x=frequency,y=delv_adjust_scaled,color=wh_form))+
+         geom_point()+
+         theme_classic()
+  
+ggplt<-set_palette(ggplt, "jco")
+
+
+# Plotting multiple Regression Lines
+ggplt<-ggplt+geom_smooth(method=lm,se=FALSE,fullrange=TRUE,
+                  aes(color=wh_form))
+
+ggsave(file="wh_delv_grouped.svg", plot=ggplt, width=5, height=5)
+
+```
+
+```{r}
+wh_plot<-ggplot(parents_only, aes(x=SUM.OF.WH, y=delv_adjust_scaled)) + geom_point(size=3, color="navy blue", shape=19) + labs(title="WH questions & DELV",x="# of WH Questions", y = "DELV Standard Score") + theme_classic() +theme(plot.title = element_text(hjust = 0.5)) + theme(text = element_text(family="Times", size=20, color="black")) + geom_smooth(method=lm)
+ggsave(file="wh_delv.svg", plot=wh_plot, width=5, height=5)
+
+wh_plot<-ggplot(parents_only, aes(x=NON.WH.SUM, y=delv_adjust_scaled)) + geom_point(size=3, color="navy blue", shape=19) + labs(title="NON-WH questions & DELV",x="# of NON-WH Questions", y = "DELV Standard Score") + theme_classic() +theme(plot.title = element_text(hjust = 0.5)) + theme(text = element_text(family="Times", size=20, color="black")) + geom_smooth(method=lm)
+ggsave(file="non_wh_delv.svg", plot=wh_plot, width=5, height=5)
+
+```
+
+## RQ3: What makes WH-questions so important to syntactic development? 
+## ANSWER: They are primarily information seeking, and this predicts syntax. 
+```{r}
+wh_codes_long$subject_ID<-str_remove(wh_codes_long$subject_ID, "sllip_")
+wh_codes_long$subject_ID<-str_remove(wh_codes_long$subject_ID, "sllip")
+wh_codes_long$subject_ID<-as.numeric(wh_codes_long$subject_ID)
+
+wh_codes_long$subject_ID<-as.numeric(wh_codes_long$subject_ID)
+
+q_type<-wh_codes_long %>%
+  group_by(subject_ID) %>%
+  summarise_at(vars(-Word.Class), funs(mean(., na.rm=TRUE)))
+
+q_type<-merge(q_type,delv_df, by = "subject_ID")
+q_type<-merge(q_type,sllip_df, by = "subject_ID")
+q_type<-merge(q_type,smr_df, by = "subject_ID")
+
+summary(delv_model<-lm(q_type$delv_adjust_scaled ~ q_type$Parent.utterances + q_type$Child.utterances+q_type$chrono_age+q_type$info_seek + q_type$pedagogical + q_type$rhetorical))
+
+summary(delv_model<-lm(q_type$delv_adjust_scaled ~ q_type$Parent.utterances + q_type$Child.utterances+q_type$chrono_age+q_type$info_seek))
+
+summary(delv_model<-lm(q_type$delv_adjust_scaled ~ q_type$Parent.utterances + q_type$Child.utterances+q_type$chrono_age+q_type$pedagogical))
+
+summary(delv_model<-lm(q_type$delv_adjust_scaled ~ q_type$Parent.utterances + q_type$Child.utterances+q_type$chrono_age+q_type$rhetorical))
+
+#summary(delv_model<-lm(q_type$WH.question ~ q_type$Parent.utterances + q_type$chrono_age + q_type$mat_ed_qualtrics+q_type$info_seek + q_type$pedagogical + q_type$rhetorical))
+
+#summary(delv_model<-lm(q_type$Passive ~ q_type$Parent.utterances + q_type$chrono_age + q_type$mat_ed_qualtrics+q_type$info_seek + q_type$pedagogical + q_type$rhetorical))
+
+#summary(delv_model<-lm(q_type$Article ~ q_type$Parent.utterances + q_type$chrono_age + q_type$mat_ed_qualtrics+q_type$info_seek + q_type$pedagogical + q_type$rhetorical))
+
+q_type_long <- gather(q_type, type, frequency, info_seek:rhetorical, factor_key=TRUE)
+q_type_long
+
+q_type_cropped <- q_type[,c(1,22)]
+q_type_long<-merge(q_type_long,q_type_cropped, by = "subject_ID")
+#names(q_type_long)[19]<-"Parent.utterances"
+## pairwise comparison
+library(emmeans)
+pwc <- q_type_long %>% 
+  emmeans_test(
+    frequency ~ type, covariate = Parent.utterances,
+    p.adjust.method = "bonferroni"
+    )
+pwc
+
+get_emmeans(pwc)
+
+## plot the comparison
+pwc <- pwc %>% add_xy_position(x = "type", fun = "mean_se")
+ggline(get_emmeans(pwc), x = "type", y = "emmean") +
+  geom_errorbar(aes(ymin = conf.low, ymax = conf.high), width = 0.2) + 
+  stat_pvalue_manual(pwc, hide.ns = TRUE, tip.length = FALSE) +
+  labs(
+    subtitle = get_test_label(res.aov, detailed = TRUE),
+    caption = get_pwc_label(pwc)
+  )
+
+
+```
+
+```{r}
+info_seek_q <- ggplot(q_type, aes(x=info_seek, y=delv_adjust_scaled)) + geom_point(size=3, color="navy blue", shape=19) + labs(title="Information Seeking Questions & DELV",x="# of Information Seeking Questions", y = "DELV Standard Score") + theme_classic() +theme(plot.title = element_text(hjust = 0.5)) + theme(text = element_text(family="Times", size=20, color="black")) + geom_smooth(method=lm)
+
+ggsave(file="info_delv.svg", plot=info_seek_q, width=5, height=5)
+
+```
+
+```{r}
+mean(smr_df$Elapsed.Time)
+sd(smr_df$Elapsed.Time)
+
+mean(parents_only$delv_adjust_scaled, na.rm = TRUE)
+sd(parents_only$delv_adjust_scaled, na.rm = TRUE)
+```
+
